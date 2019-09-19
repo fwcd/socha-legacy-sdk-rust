@@ -128,7 +128,7 @@ impl FromXmlNode for Left {
 	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
 }
 
-impl<P> FromXmlNode for Room<P> where P: SCPlugin, Data<P>: FromXmlNode {
+impl<P> FromXmlNode for Room<P> where P: SCPlugin {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			room_id: node.attribute("room_id")?.to_owned(),
@@ -137,7 +137,7 @@ impl<P> FromXmlNode for Room<P> where P: SCPlugin, Data<P>: FromXmlNode {
 	}
 }
 
-impl<P> FromXmlNode for Data<P> where P: SCPlugin, P::GameState: FromXmlNode, P::PlayerColor: FromStr, SCError: From<<P::PlayerColor as FromStr>::Err> {
+impl<P> FromXmlNode for Data<P> where P: SCPlugin {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		let class = node.attribute("class")?;
 		match class {
@@ -187,4 +187,3 @@ impl FromXmlNode for PlayerScore {
 	}
 }
 
-// TODO: Into XML node conversions

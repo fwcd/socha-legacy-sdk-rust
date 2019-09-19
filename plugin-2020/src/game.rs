@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
+use socha_client_base::hashmap;
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode};
 
@@ -70,7 +71,7 @@ pub struct Field {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Move<C=AxialCoords> {
 	SetMove { piece: Piece, destination: C },
-	DragMove { start: C, end: C }
+	DragMove { start: C, destination: C }
 }
 
 /// A game piece.
@@ -151,6 +152,15 @@ impl FromStr for PlayerColor {
 	}
 }
 
+impl From<PlayerColor> for String {
+	fn from(color: PlayerColor) -> String {
+		match color {
+			PlayerColor::Red => "RED",
+			PlayerColor::Blue => "BLUE"
+		}.to_owned()
+	}
+}
+
 impl FromStr for PieceType {
 	type Err = SCError;
 	
@@ -163,6 +173,18 @@ impl FromStr for PieceType {
 			"SPIDER" => Ok(Self::Spider),
 			_ => Err(format!("Did not recognize piece type {}", raw).into())
 		}
+	}
+}
+
+impl From<PieceType> for String {
+	fn from(piece_type: PieceType) -> String {
+		match piece_type {
+			PieceType::Ant => "ANT",
+			PieceType::Bee => "BEE",
+			PieceType::Beetle => "BEETLE",
+			PieceType::Grasshopper => "GRASSHOPPER",
+			PieceType::Spider => "SPIDER"
+		}.to_owned()
 	}
 }
 
@@ -224,5 +246,46 @@ impl FromXmlNode for Piece {
 			owner: node.attribute("owner")?.parse()?,
 			piece_type: node.attribute("type")?.parse()?
 		})
+	}
+}
+
+impl From<Move> for XmlNode {
+	fn from(game_move: Move) -> Self {
+		match game_move {
+			Move::SetMove { piece, destination } => Self::new(
+				"setmove",
+				"",
+				HashMap::new(),
+				vec![piece.into(), CubeCoords::from(destination).into()]
+			),
+			Move::DragMove { start, destination } => Self::new(
+				"dragmove",
+				"",
+				HashMap::new(),
+				vec![CubeCoords::from(start).into(), CubeCoords::from(destination).into()]
+			)
+		}
+	}
+}
+
+impl From<Piece> for XmlNode {
+	fn from(piece: Piece) -> Self {
+		Self::new(
+			"piece",
+			"",
+			hashmap!["owner".to_owned() => piece.owner.into(), "type".to_owned() => piece.piece_type.into()],
+			vec![]
+		)
+	}
+}
+
+impl From<CubeCoords> for XmlNode {
+	fn from(coords: CubeCoords) -> Self {
+		Self::new(
+			"CubeCoordinates",
+			"",
+			hashmap!["x".to_owned() => coords.x.to_string(), "y".to_owned() => coords.y.to_string(), "z".to_owned() => coords.z.to_string()],
+			vec![]
+		)
 	}
 }

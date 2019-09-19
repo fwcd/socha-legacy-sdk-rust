@@ -41,12 +41,7 @@ pub struct SCClient<D> where D: SCClientDelegate {
 	game_state: Option<<D::Plugin as SCPlugin>::GameState>
 }
 
-impl<D> SCClient<D> 
-	where
-		D: SCClientDelegate,
-		<<D as SCClientDelegate>::Plugin as SCPlugin>::GameState: FromXmlNode,
-		<<D as SCClientDelegate>::Plugin as SCPlugin>::PlayerColor: FromStr,
-		SCError: From<<<<D as SCClientDelegate>::Plugin as SCPlugin>::PlayerColor as FromStr>::Err> {
+impl<D> SCClient<D> where D: SCClientDelegate {
 	/// Creates a new client using the specified delegate.
 	pub fn new(delegate: D, debug_mode: bool) -> Self {
 		Self { delegate: delegate, debug_mode: debug_mode, my_color: None, game_state: None }

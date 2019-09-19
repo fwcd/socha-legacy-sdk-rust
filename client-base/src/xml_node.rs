@@ -15,6 +15,12 @@ pub struct XmlNode {
 }
 
 impl XmlNode {
+	/// Creates a new XML node using the specified
+	/// parameters.
+	pub fn new(name: &str, data: &str, attributes: impl Into<HashMap<String, String>>, childs: impl Into<Vec<XmlNode>>) -> Self {
+		Self { name: name.to_owned(), data: data.to_owned(), attributes: attributes.into(), childs: childs.into() }
+	}
+
 	/// Deserializes an XML node tree
 	/// from the given XML event reader.
 	pub fn read_from<R>(reader: &mut EventReader<R>) -> SCResult<XmlNode> where R: Read {
