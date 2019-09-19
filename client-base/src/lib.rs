@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 pub mod client;
 pub mod plugin;
 pub mod protocol;

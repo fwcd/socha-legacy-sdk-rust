@@ -2,6 +2,7 @@
 
 use std::str::FromStr;
 use crate::xml_node::{FromXmlNode, XmlNode};
+use crate::plugin::SCPlugin;
 use crate::util::SCResult;
 use crate::error::SCError;
 
@@ -12,11 +13,18 @@ pub struct Joined {
 	pub room_id: String
 }
 
+/// A message indicating that the client
+/// has left a room with the specified id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Left {
+	pub room_id: String
+}
+
 /// A message in a room together with some data.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Room<C, S, P> {
+pub struct Room<P> where P: SCPlugin {
 	pub room_id: String,
-	pub data: Data<C, S, P>
+	pub data: Data<P>
 }
 
 /// A polymorphic container for game data
@@ -26,19 +34,19 @@ pub struct Room<C, S, P> {
 /// are implemented independently of the base
 /// protocol for each year's game.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Data<C, S, P> {
-	WelcomeMessage { color: C },
-	Memento { state: S },
+pub enum Data<P> where P: SCPlugin {
+	WelcomeMessage { color: P::PlayerColor },
+	Memento { state: P::GameState },
 	MoveRequest,
 	GameResult { result: GameResult<P> }
 }
 
 /// The final result of a game.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GameResult<P> {
+pub struct GameResult<P> where P: SCPlugin {
 	pub definition: ScoreDefinition,
 	pub scores: Vec<PlayerScore>,
-	pub winners: Vec<P>
+	pub winners: Vec<P::Player>
 }
 
 /// The definition of a score.
@@ -112,51 +120,55 @@ impl FromStr for ScoreCause {
 
 // XML conversions
 
-impl<'a> FromXmlNode<'a> for Joined {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
+impl FromXmlNode for Joined {
+	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
 }
 
-impl<'a, C, S, P> FromXmlNode<'a> for Room<C, S, P> where Data<C, S, P>: FromXmlNode<'a> {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for Left {
+	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
+}
+
+impl<P> FromXmlNode for Room<P> where P: SCPlugin, Data<P>: FromXmlNode {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			room_id: node.attribute("room_id")?.to_owned(),
-			data: <Data<C, S, P>>::from_node(node.child_by_name("data")?)?
+			data: <Data<P>>::from_node(node.child_by_name("data")?)?
 		})
 	}
 }
 
-impl<'a, C, S, P> FromXmlNode<'a> for Data<C, S, P> where C: FromStr, SCError: From<C::Err>, S: FromXmlNode<'a> {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl<P> FromXmlNode for Data<P> where P: SCPlugin, P::GameState: FromXmlNode, P::PlayerColor: FromStr, SCError: From<<P::PlayerColor as FromStr>::Err> {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		let class = node.attribute("class")?;
 		match class {
 			"welcomeMessage" => Ok(Self::WelcomeMessage { color: node.attribute("color")?.parse()? }),
-			"memento" => Ok(Self::Memento { state: S::from_node(node.child_by_name("state")?)? }),
+			"memento" => Ok(Self::Memento { state: P::GameState::from_node(node.child_by_name("state")?)? }),
 			"sc.framework.plugins.protocol.MoveRequest" => Ok(Self::MoveRequest),
 			_ => Err(format!("Unrecognized data class: {}", class).into())
 		}
 	}
 }
 
-impl<'a, P> FromXmlNode<'a> for GameResult<P> where P: FromXmlNode<'a> {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl<P> FromXmlNode for GameResult<P> where P: SCPlugin, P::Player: FromXmlNode {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			definition: ScoreDefinition::from_node(node.child_by_name("definition")?)?,
 			scores: node.childs_by_name("score").map(PlayerScore::from_node).collect::<SCResult<_>>()?,
-			winners: node.childs_by_name("winner").map(P::from_node).collect::<SCResult<_>>()?
+			winners: node.childs_by_name("winner").map(P::Player::from_node).collect::<SCResult<_>>()?
 		})
 	}
 }
 
-impl<'a> FromXmlNode<'a> for ScoreDefinition {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for ScoreDefinition {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			fragments: node.childs_by_name("fragment").map(ScoreFragment::from_node).collect::<SCResult<_>>()?
 		})
 	}
 }
 
-impl<'a> FromXmlNode<'a> for ScoreFragment {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for ScoreFragment {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			name: node.attribute("name")?.to_owned(),
 			aggregation: node.attribute("aggregation")?.parse()?,
@@ -166,8 +178,8 @@ impl<'a> FromXmlNode<'a> for ScoreFragment {
 }
 
 
-impl<'a> FromXmlNode<'a> for PlayerScore {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for PlayerScore {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			cause: node.attribute("cause")?.parse()?,
 			reason: node.attribute("reason")?.to_owned()

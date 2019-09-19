@@ -2,11 +2,12 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use socha_client_base::util::SCResult;
+use socha_client_base::util::{SCResult, HasOpponent};
+use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode};
 
 /// A player color in the game.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PlayerColor {
 	Red,
 	Blue
@@ -27,9 +28,9 @@ pub struct GameState {
 	pub turn: u32,
 	pub start_player_color: PlayerColor,
 	pub current_player_color: PlayerColor,
-	pub red_player: Player,
-	pub blue_player: Player,
 	pub board: Board,
+	red_player: Player,
+	blue_player: Player,
 	undeployed_red_pieces: Vec<Piece>,
 	undeployed_blue_pieces: Vec<Piece>
 }
@@ -109,6 +110,23 @@ impl GameState {
 			PlayerColor::Blue => &self.undeployed_blue_pieces
 		}
 	}
+	
+	/// Fetches the player data for a given color.
+	pub fn player(&self, color: PlayerColor) -> &Player {
+		match color {
+			PlayerColor::Red => &self.red_player,
+			PlayerColor::Blue => &self.blue_player
+		}
+	}
+}
+
+impl HasOpponent for PlayerColor {
+	fn opponent(self) -> Self {
+		match self {
+			Self::Red => Self::Blue,
+			Self::Blue => Self::Red
+		}
+	}
 }
 
 // General conversions
@@ -122,36 +140,36 @@ impl From<AxialCoords> for CubeCoords {
 }
 
 impl FromStr for PlayerColor {
-	type Err = String;
+	type Err = SCError;
 
-	fn from_str(raw: &str) -> Result<Self, String> {
+	fn from_str(raw: &str) -> SCResult<Self> {
 		match raw {
 			"RED" => Ok(Self::Red),
 			"BLUE" => Ok(Self::Blue),
-			_ => Err(format!("Did not recognize player color {}", raw))
+			_ => Err(format!("Did not recognize player color {}", raw).into())
 		}
 	}
 }
 
 impl FromStr for PieceType {
-	type Err = String;
+	type Err = SCError;
 	
-	fn from_str(raw: &str) -> Result<Self, String> {
+	fn from_str(raw: &str) -> SCResult<Self> {
 		match raw {
 			"ANT" => Ok(Self::Ant),
 			"BEE" => Ok(Self::Bee),
 			"BEETLE" => Ok(Self::Beetle),
 			"GRASSHOPPER" => Ok(Self::Grasshopper),
 			"SPIDER" => Ok(Self::Spider),
-			_ => Err(format!("Did not recognize piece type {}", raw))
+			_ => Err(format!("Did not recognize piece type {}", raw).into())
 		}
 	}
 }
 
 // XML conversions
 
-impl<'a> FromXmlNode<'a> for GameState {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for GameState {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			turn: node.attribute("turn")?.parse()?,
 			start_player_color: node.attribute("startPlayerColor")?.parse()?,
@@ -165,8 +183,8 @@ impl<'a> FromXmlNode<'a> for GameState {
 	}
 }
 
-impl<'a> FromXmlNode<'a> for Player {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for Player {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			color: node.attribute("color")?.parse()?,
 			display_name: node.attribute("displayName")?.to_owned()
@@ -174,8 +192,8 @@ impl<'a> FromXmlNode<'a> for Player {
 	}
 }
 
-impl<'a> FromXmlNode<'a> for Board {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for Board {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			fields: node.child_by_name("fields")?
 				.childs_by_name("field")
@@ -192,16 +210,16 @@ impl<'a> FromXmlNode<'a> for Board {
 	}
 }
 
-impl<'a> FromXmlNode<'a> for Field {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for Field {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			is_obstructed: node.attribute("isObstructed")?.parse()?
 		})
 	}
 }
 
-impl<'a> FromXmlNode<'a> for Piece {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+impl FromXmlNode for Piece {
+	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			owner: node.attribute("owner")?.parse()?,
 			piece_type: node.attribute("type")?.parse()?

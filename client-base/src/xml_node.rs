@@ -88,6 +88,6 @@ impl XmlNode {
 }
 
 /// Indicates that the type can be created from an XML node.
-pub trait FromXmlNode<'a> where Self: Sized {
-	fn from_node(node: &'a XmlNode) -> SCResult<Self>;
+pub trait FromXmlNode where Self: Sized {
+	fn from_node(node: &XmlNode) -> SCResult<Self>;
 }
