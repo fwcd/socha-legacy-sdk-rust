@@ -1,6 +1,6 @@
 //! The game structures for the "Hive" game.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::hashmap;
@@ -37,7 +37,7 @@ pub struct GameState {
 }
 
 /// Axial coordinates on the hex grid.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AxialCoords {
 	pub x: i32,
 	pub y: i32
@@ -45,7 +45,7 @@ pub struct AxialCoords {
 
 /// Cube coordinates on the hex grid.
 /// These are used by the protocol internally.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct CubeCoords {
 	pub x: i32,
 	pub y: i32,
@@ -64,25 +64,26 @@ pub struct Board {
 /// A field on the game board.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
+	piece_stack: Vec<Piece>,
 	pub is_obstructed: bool
 }
 
 /// A transition between two game states.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Move<C=AxialCoords> {
 	SetMove { piece: Piece, destination: C },
 	DragMove { start: C, destination: C }
 }
 
 /// A game piece.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Piece {
 	pub owner: PlayerColor,
 	pub piece_type: PieceType
 }
 
 /// A game piece type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PieceType {
 	Ant,
 	Bee,
@@ -100,6 +101,39 @@ impl Board {
 	/// to axial coordinates.
 	pub fn field(&self, coords: impl Into<AxialCoords>) -> Option<&Field> {
 		self.fields.get(&coords.into())
+	}
+	
+	/// Fetches all fields owned by the given color.
+	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=&Field> {
+		self.fields.values().filter(move |f| f.owner() == Some(color))
+	}
+}
+
+impl Field {
+	/// Fetches the player color "owning" the field.
+	pub fn owner(&self) -> Option<PlayerColor> {
+		self.piece().map(|p| p.owner)
+	}
+	
+	/// Fetches the top-most piece.
+	pub fn piece(&self) -> Option<Piece> {
+		self.piece_stack.last().cloned()
+	}
+	
+	/// Fetches the piece stack.
+	pub fn piece_stack(&self) -> &Vec<Piece> {
+		&self.piece_stack
+	}
+	
+	/// Pushes a piece onto the piece stack.
+	pub fn push(&mut self, piece: Piece) {
+		self.piece_stack.push(piece)
+	}
+	
+	/// Pops a piece from the piece stack or
+	/// returns `None` if the stack is empty.
+	pub fn pop(&mut self) -> Option<Piece> {
+		self.piece_stack.pop()
 	}
 }
 
@@ -235,6 +269,7 @@ impl FromXmlNode for Board {
 impl FromXmlNode for Field {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
+			piece_stack: node.childs_by_name("piece").map(Piece::from_node).collect::<Result<_, _>>()?,
 			is_obstructed: node.attribute("isObstructed")?.parse()?
 		})
 	}
