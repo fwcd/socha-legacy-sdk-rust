@@ -1,0 +1,8 @@
+[package]
+name = "socha-plugin-2020"
+version = "0.1.0"
+authors = ["fwcd"]
+edition = "2018"
+
+[dependencies]
+socha-client-base = { path = "../client-base" }
