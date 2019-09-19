@@ -64,6 +64,8 @@ impl XmlNode {
 		}
 		writer.write(start_element)?;
 		
+		// TODO: Write data/contents as characters
+
 		for child in &self.childs {
 			child.write_to(writer)?;
 		}

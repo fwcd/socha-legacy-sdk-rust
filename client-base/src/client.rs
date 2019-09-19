@@ -1,11 +1,10 @@
-use std::str::FromStr;
 use std::net::TcpStream;
 use std::io::{self, BufWriter, BufReader, Read, Write};
-use log::{info, debug, error};
-use xml::reader::{XmlEvent, EventReader};
+use log::{info, debug, warn, error};
+use xml::reader::{XmlEvent as XmlReadEvent, EventReader};
+use xml::writer::{EventWriter};
 use crate::xml_node::{XmlNode, FromXmlNode};
 use crate::util::SCResult;
-use crate::error::SCError;
 use crate::plugin::SCPlugin;
 use crate::protocol::{Joined, Left, Room, Data, GameResult};
 
@@ -18,14 +17,14 @@ pub trait SCClientDelegate {
 	type Plugin: SCPlugin;
 
 	/// Invoked whenever the game state updates.
-	fn on_update_state(&mut self, state: &<Self::Plugin as SCPlugin>::GameState) {}
+	fn on_update_state(&mut self, _state: &<Self::Plugin as SCPlugin>::GameState) {}
 	
 	/// Invoked when the game ends.
-	fn on_game_end(&mut self, result: GameResult<Self::Plugin>) {}
+	fn on_game_end(&mut self, _result: GameResult<Self::Plugin>) {}
 	
 	/// Invoked when the welcome message is received
 	/// with the player's color.
-	fn on_welcome_message(&mut self, color: &<Self::Plugin as SCPlugin>::PlayerColor) {}
+	fn on_welcome_message(&mut self, _color: &<Self::Plugin as SCPlugin>::PlayerColor) {}
 	
 	/// Requests a move from the delegate. This method
 	/// should implement the "main" game logic.
@@ -60,7 +59,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 			
 			let join_xml = match reservation {
 				Some(res) => format!("<joinPrepared reservationCode=\"{}\" />", res),
-				None => "<join gameType=\"swc_2020_hive\" />".to_owned()
+				None => format!("<join gameType=\"{}\" />", D::Plugin::protocol_game_type())
 			};
 			info!("Sending join message {}", join_xml);
 			writer.write(join_xml.as_bytes())?;
@@ -71,7 +70,9 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 			io::copy(&mut stream, &mut io::stdout())?;
 		} else {
 			// In normal mode, begin parsing game messages from the stream
-			self.run_game(BufReader::new(stream))?;
+			let reader = BufReader::new(stream.try_clone()?);
+			let writer = BufWriter::new(stream);
+			self.run_game(reader, writer)?;
 		}
 		
 		Ok(())
@@ -79,18 +80,19 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 	
 	/// Blocks the thread and parses/handles game messages
 	/// from the provided reader.
-	fn run_game<R>(mut self, reader: R) -> SCResult<()> where R: Read {
-		let mut xml_parser = EventReader::new(reader);
+	fn run_game<R, W>(mut self, reader: R, writer: W) -> SCResult<()> where R: Read, W: Write {
+		let mut xml_reader = EventReader::new(reader);
+		let mut xml_writer = EventWriter::new(writer);
 		
 		// Read initial protocol element
 		info!("Waiting for initial <protocol>...");
-		while match xml_parser.next() {
-			Ok(XmlEvent::StartElement { name, .. }) => Some(name),
+		while match xml_reader.next() {
+			Ok(XmlReadEvent::StartElement { name, .. }) => Some(name),
 			_ => None
 		}.filter(|n| n.local_name == "protocol").is_none() {}
 
 		loop {
-			let node = XmlNode::read_from(&mut xml_parser)?;
+			let node = XmlNode::read_from(&mut xml_reader)?;
 			debug!("Got XML node {:#?}", node);
 			
 			if let Ok(room) = <Room<D::Plugin>>::from_node(&node) {
@@ -111,6 +113,10 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 						if let Some(ref state) = self.game_state {
 							if let Some(my_color) = self.my_color {
 								let new_move = self.delegate.request_move(state, my_color);
+								<SCResult<XmlNode>>::from(Room::<D::Plugin> {
+									room_id: room.room_id,
+									data: Data::Move(new_move)
+								})?.write_to(&mut xml_writer)?;
 							} else {
 								error!("Can not fulfill move request without a color!");
 							}
@@ -118,10 +124,11 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 							error!("Can not fulfill move request without a game state!");
 						}
 					},
-					Data::GameResult { result } => {
+					Data::GameResult(result) => {
 						info!("Got game result: {:?}", result);
 						self.delegate.on_game_end(result);
-					}
+					},
+					_ => warn!("Could not handle room data: {:?}", room.data)
 				}
 			} else if let Ok(joined) = Joined::from_node(&node) {
 				// Got 'joined' message

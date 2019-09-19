@@ -4,7 +4,7 @@ use std::str::FromStr;
 use crate::xml_node::{FromXmlNode, XmlNode};
 use crate::plugin::SCPlugin;
 use crate::util::SCResult;
-use crate::error::SCError;
+use crate::hashmap;
 
 /// A message indicating that the client
 /// has joined a room with the specified id.
@@ -37,8 +37,9 @@ pub struct Room<P> where P: SCPlugin {
 pub enum Data<P> where P: SCPlugin {
 	WelcomeMessage { color: P::PlayerColor },
 	Memento { state: P::GameState },
+	Move(P::Move),
 	MoveRequest,
-	GameResult { result: GameResult<P> }
+	GameResult(GameResult<P>)
 }
 
 /// The final result of a game.
@@ -177,7 +178,6 @@ impl FromXmlNode for ScoreFragment {
 	}
 }
 
-
 impl FromXmlNode for PlayerScore {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
@@ -187,3 +187,28 @@ impl FromXmlNode for PlayerScore {
 	}
 }
 
+impl<P> From<Room<P>> for SCResult<XmlNode> where P: SCPlugin {
+	fn from(room: Room<P>) -> SCResult<XmlNode> {
+		Ok(XmlNode::new(
+			"room",
+			"",
+			hashmap!["roomId".to_owned() => room.room_id],
+			vec![<SCResult<XmlNode>>::from(room.data)?]
+		))
+	}
+}
+
+impl<P> From<Data<P>> for SCResult<XmlNode> where P: SCPlugin {
+	fn from(data: Data<P>) -> SCResult<XmlNode> {
+		let name = "data";
+		match data {
+			Data::Move(game_move) => Ok(XmlNode::new(
+				name,
+				"",
+				hashmap!["class".to_owned() => "move".to_owned()],
+				vec![game_move.into()]
+			)),
+			_ => Err(format!("{:?} can currently not be serialized", data).into())
+		}
+	}
+}

@@ -8,7 +8,11 @@ use crate::error::SCError;
 /// which represent various parts of a game.
 pub trait SCPlugin: Debug {
 	type PlayerColor: Copy + Debug + Eq + HasOpponent + FromStr<Err=SCError>;
-	type Player<'a>: Clone + Debug + Eq + FromXmlNode;
-	type GameState<'a>: Clone + Debug + Eq + FromXmlNode;
+	type Player: Clone + Debug + Eq + FromXmlNode;
+	type GameState: Clone + Debug + Eq + FromXmlNode;
 	type Move: Clone + Debug + Eq + Into<XmlNode>;
+	
+	/// Fetches the 'gameType' used during
+	/// the protocol handshake.
+	fn protocol_game_type<'a>() -> &'a str;
 }
