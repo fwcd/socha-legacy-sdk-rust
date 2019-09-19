@@ -1,7 +1,8 @@
 //! The game structures for the "Hive" game.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::FromStr;
+use std::ops::{Add, Sub, Mul};
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::hashmap;
 use socha_client_base::error::SCError;
@@ -39,17 +40,17 @@ pub struct GameState {
 /// Axial coordinates on the hex grid.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AxialCoords {
-	pub x: i32,
-	pub y: i32
+	x: i32,
+	y: i32
 }
 
 /// Cube coordinates on the hex grid.
 /// These are used by the protocol internally.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct CubeCoords {
-	pub x: i32,
-	pub y: i32,
-	pub z: i32
+	x: i32,
+	y: i32,
+	z: i32
 }
 
 /// The game board which is a symmetric hex grid with
@@ -94,6 +95,58 @@ pub enum PieceType {
 
 // General implementations
 
+impl AxialCoords {
+	/// Creates new axial coordinates.
+	#[inline]
+	pub fn new(x: i32, y: i32) -> Self { Self { x: x, y: y } }
+	
+	/// Fetches the x-coordinate
+	#[inline]
+	pub fn x(self) -> i32 { self.x }
+	
+	/// Fetches the y-coordinate
+	#[inline]
+	pub fn y(self) -> i32 { self.y }
+
+	/// Fetches all 6 neighbors, regardless of any board
+	/// boundaries.
+	#[inline]
+	pub fn coord_neighbors(self) -> [AxialCoords; 6] {
+		[
+			self + AxialCoords::new(-1, 0),
+			self + AxialCoords::new(0, 1),
+			self + AxialCoords::new(1, 1),
+			self + AxialCoords::new(1, 0),
+			self + AxialCoords::new(0, -1),
+			self + AxialCoords::new(-1, -1)
+		]
+	}
+}
+
+impl CubeCoords {
+	/// Creates new cube coordinates if they are valid.
+	#[inline]
+	pub fn new(x: i32, y: i32, z: i32) -> Option<Self> {
+		if (x + y + z) == 0 {
+			Some(CubeCoords { x: x, y: y, z: z })
+		} else {
+			None
+		}
+	}
+	
+	/// Fetches the x-coordinate
+	#[inline]
+	pub fn x(self) -> i32 { self.x }
+	
+	/// Fetches the y-coordinate
+	#[inline]
+	pub fn y(self) -> i32 { self.y }
+	
+	/// Fetches the z-coordinate
+	#[inline]
+	pub fn z(self) -> i32 { self.z }
+}
+
 impl Board {
 	/// Fetches a reference to the field at the given
 	/// coordinates. The coordinates can be of and type
@@ -103,38 +156,81 @@ impl Board {
 		self.fields.get(&coords.into())
 	}
 	
+	/// Tests whether a given position is obstructed.
+	pub fn is_obstructed(&self, coords: impl Into<AxialCoords>) -> bool {
+		self.field(coords).map(|f| f.is_obstructed).unwrap_or(true)
+	}
+	
 	/// Fetches all fields owned by the given color.
 	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=&Field> {
 		self.fields.values().filter(move |f| f.owner() == Some(color))
+	}
+	
+	/// Fetches all fields.
+	pub fn fields(&self) -> impl Iterator<Item=(&AxialCoords, &Field)> {
+		self.fields.iter()
+	}
+	
+	/// Tests whether the board contains the given coordinate.
+	pub fn contains_coords(&self, coords: impl Into<AxialCoords>) -> bool {
+		self.fields.contains_key(&coords.into())
+	}
+	
+	/// Fetches the (existing) neighbor fields on the board.
+	pub fn neighbors<'a>(&'a self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=AxialCoords> + 'a {
+		coords.into().coord_neighbors().iter().cloned().filter(|c| self.contains_coords(c.clone()))
+	}
+	
+	/// Performs an "inverted" depth-first search on the board
+	/// starting at the given coordinates and removing visited
+	/// locations from the set.
+	fn inv_dfs_swarm(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>) {
+		if let Some(field) = self.field(coords).filter(|f| f.has_pieces()) {
+			unvisited.remove(&coords);
+			for neighbor in self.neighbors(coords) {
+				if unvisited.contains(&neighbor) {
+					self.inv_dfs_swarm(neighbor, unvisited)
+				}
+			}
+		}
+	}
+	
+	/// Performs a depth-first search on the board at the given
+	/// position to test whether the swarm is connected.
+	pub fn is_swarm_connected(&self) -> bool {
+		let mut unvisited = self.fields.iter()
+			.filter_map(|(c, f)| if f.has_pieces() { Some(c) } else { None })
+			.cloned()
+			.collect::<HashSet<AxialCoords>>();
+
+		if let Some(start) = unvisited.iter().next() {
+			self.inv_dfs_swarm(*start, &mut unvisited);
+			unvisited.is_empty()
+		} else {
+			true // An empty swarm is connected
+		}
 	}
 }
 
 impl Field {
 	/// Fetches the player color "owning" the field.
-	pub fn owner(&self) -> Option<PlayerColor> {
-		self.piece().map(|p| p.owner)
-	}
+	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
 	
 	/// Fetches the top-most piece.
-	pub fn piece(&self) -> Option<Piece> {
-		self.piece_stack.last().cloned()
-	}
+	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
+	
+	/// Tests whether the field contains pieces.
+	pub fn has_pieces(&self) -> bool { !self.piece_stack.is_empty() }
 	
 	/// Fetches the piece stack.
-	pub fn piece_stack(&self) -> &Vec<Piece> {
-		&self.piece_stack
-	}
+	pub fn piece_stack(&self) -> &Vec<Piece> { &self.piece_stack }
 	
 	/// Pushes a piece onto the piece stack.
-	pub fn push(&mut self, piece: Piece) {
-		self.piece_stack.push(piece)
-	}
+	pub fn push(&mut self, piece: Piece) { self.piece_stack.push(piece) }
 	
 	/// Pops a piece from the piece stack or
 	/// returns `None` if the stack is empty.
-	pub fn pop(&mut self) -> Option<Piece> {
-		self.piece_stack.pop()
-	}
+	pub fn pop(&mut self) -> Option<Piece> { self.piece_stack.pop() }
 }
 
 impl GameState {
@@ -153,6 +249,49 @@ impl GameState {
 			PlayerColor::Blue => &self.blue_player
 		}
 	}
+	
+	/// Fetches the current _round_ (which is half the turn).
+	pub fn round(&self) -> u32 { self.turn / 2 }
+
+	// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
+
+	fn validate_set_move(&self, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
+		// let destination = destination_coords.into();
+		// if !self.board.contains_coords(destination) { return Err(format!("Move destination out of bounds: {:?}", destination).into()) }
+		// if self.board.field(destination).map(|f| f.is_obstructed).unwrap_or(true) { return Err(format!("Move destination is obstructed: {:?}", destination).into()) }
+		
+		unimplemented!()
+	}
+	
+	fn validate_drag_move(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
+		unimplemented!()
+	}
+	
+	//// Tests whether the given move is valid.
+	pub fn validate_move(&self, game_move: Move) -> SCResult<()> {
+		match game_move {
+			Move::SetMove { piece, destination } => self.validate_set_move(piece, destination),
+			Move::DragMove { start, destination } => self.validate_set_move(start, destination)
+		}
+	}
+	
+	/// Fetches a list of possible `SetMove`s.
+	fn possible_set_moves(&self, color: PlayerColor) -> impl Iterator<Item=Move> {
+		unimplemented!()
+	}
+	
+	/// Fetches a list of possible `DragMove`s.
+	fn possible_drag_moves(&self, color: PlayerColor) -> impl Iterator<Item=Move> {
+		unimplemented!()
+	}
+	
+	/// Fetches a list of possible moves for a given color.
+	pub fn possible_moves(&self, color: PlayerColor) -> Vec<Move> {
+		let moves = Vec::new();
+		moves.extend(self.possible_set_moves(color));
+		moves.extend(self.possible_drag_moves(color));
+		moves
+	}
 }
 
 impl HasOpponent for PlayerColor {
@@ -162,6 +301,26 @@ impl HasOpponent for PlayerColor {
 			Self::Blue => Self::Red
 		}
 	}
+}
+
+// Operator overloads
+
+impl Add for AxialCoords {
+	type Output = Self;
+
+	fn add(self, rhs: Self) -> Self { Self { x: self.x + rhs.x, y: self.y + rhs.y } }
+}
+
+impl Sub for AxialCoords {
+	type Output = Self;
+
+	fn sub(self, rhs: Self) -> Self { Self { x: self.x - rhs.x, y: self.y - rhs.y } }
+}
+
+impl<R> Mul<R> for AxialCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn mul(self, rhs: R) -> Self { Self { x: self.x * rhs.into(), y: self.y * rhs.into() } }
 }
 
 // General conversions
