@@ -29,7 +29,9 @@ pub struct GameState {
 	pub current_player_color: PlayerColor,
 	pub red_player: Player,
 	pub blue_player: Player,
-	pub board: Board
+	pub board: Board,
+	pub undeployed_red_pieces: Vec<Piece>,
+	pub undeployed_blue_pieces: Vec<Piece>
 }
 
 /// Axial coordinates on the hex grid.
@@ -121,6 +123,21 @@ impl FromStr for PlayerColor {
 	}
 }
 
+impl FromStr for PieceType {
+	type Err = String;
+	
+	fn from_str(raw: &str) -> Result<Self, String> {
+		match raw {
+			"ANT" => Ok(Self::Ant),
+			"BEE" => Ok(Self::Bee),
+			"BEETLE" => Ok(Self::Beetle),
+			"GRASSHOPPER" => Ok(Self::Grasshopper),
+			"SPIDER" => Ok(Self::Spider),
+			_ => Err(format!("Did not recognize piece type {}", raw))
+		}
+	}
+}
+
 // XML conversions
 
 impl<'a> FromXmlNode<'a> for GameState {
@@ -131,7 +148,9 @@ impl<'a> FromXmlNode<'a> for GameState {
 			current_player_color: node.attribute("currentPlayerColor")?.parse()?,
 			red_player: Player::from_node(node.child_by_name("red")?)?,
 			blue_player: Player::from_node(node.child_by_name("blue")?)?,
-			board: Board::from_node(node.child_by_name("board")?)?
+			board: Board::from_node(node.child_by_name("board")?)?,
+			undeployed_red_pieces: node.child_by_name("undeployedRedPieces")?.childs_by_name("piece").map(Piece::from_node).collect::<Result<_, _>>()?,
+			undeployed_blue_pieces: node.child_by_name("undeployedBluePieces")?.childs_by_name("piece").map(Piece::from_node).collect::<Result<_, _>>()?
 		})
 	}
 }
@@ -167,6 +186,15 @@ impl<'a> FromXmlNode<'a> for Field {
 	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			is_obstructed: node.attribute("isObstructed")?.parse()?
+		})
+	}
+}
+
+impl<'a> FromXmlNode<'a> for Piece {
+	fn from_node(node: &'a XmlNode) -> SCResult<Self> {
+		Ok(Self {
+			owner: node.attribute("owner")?.parse()?,
+			piece_type: node.attribute("type")?.parse()?
 		})
 	}
 }
