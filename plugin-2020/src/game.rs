@@ -30,8 +30,8 @@ pub struct GameState {
 	pub red_player: Player,
 	pub blue_player: Player,
 	pub board: Board,
-	pub undeployed_red_pieces: Vec<Piece>,
-	pub undeployed_blue_pieces: Vec<Piece>
+	undeployed_red_pieces: Vec<Piece>,
+	undeployed_blue_pieces: Vec<Piece>
 }
 
 /// Axial coordinates on the hex grid.
@@ -98,6 +98,16 @@ impl Board {
 	/// to axial coordinates.
 	pub fn field(&self, coords: impl Into<AxialCoords>) -> Option<&Field> {
 		self.fields.get(&coords.into())
+	}
+}
+
+impl GameState {
+	/// Fetches the undeployed pieces for a specific color.
+	pub fn undeployed_pieces(&self, color: PlayerColor) -> &Vec<Piece> {
+		match color {
+			PlayerColor::Red => &self.undeployed_red_pieces,
+			PlayerColor::Blue => &self.undeployed_blue_pieces
+		}
 	}
 }
 

@@ -27,7 +27,7 @@ pub trait SCClientDelegate {
 	
 	/// Requests a move from the delegate. This method
 	/// should implement the "main" game logic.
-	fn move_request(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, me: &<Self::Plugin as SCPlugin>::Player, opponent: &<Self::Plugin as SCPlugin>::Player) -> <Self::Plugin as SCPlugin>::Move;
+	fn request_move(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, me: &<Self::Plugin as SCPlugin>::Player, opponent: &<Self::Plugin as SCPlugin>::Player) -> <Self::Plugin as SCPlugin>::Move;
 }
 
 /// The client which handles XML requests, manages
