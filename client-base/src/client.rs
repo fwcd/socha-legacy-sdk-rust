@@ -4,27 +4,30 @@ use log::info;
 use xml::reader::{XmlEvent, EventReader};
 use crate::xml_node::XmlNode;
 use crate::util::SCResult;
+use crate::plugin::SCPlugin;
 use crate::protocol::*;
 
 /// A handler that implements the game player's
 /// behavior, usually employing some custom move
 /// selection strategy.
 pub trait SCClientDelegate {
-	type PlayerColor;
-	type Player;
-	type GameState;
-	type Move;
+	/// The plugin defining which types are
+	/// representing various parts of the game.
+	type Plugin: SCPlugin;
 
 	/// Invoked whenever the game state updates.
-	fn on_update_state(&mut self, state: &Self::GameState) {}
+	fn on_update_state(&mut self, state: &<Self::Plugin as SCPlugin>::GameState) {}
+	
+	/// Invoked when the game ends.
+	fn on_game_end(&mut self, result: GameResult<<Self::Plugin as SCPlugin>::Player>) {}
 	
 	/// Invoked when the welcome message is received
 	/// with the player's color.
-	fn on_welcome_message(&mut self, color: &Self::PlayerColor) {}
+	fn on_welcome_message(&mut self, color: &<Self::Plugin as SCPlugin>::PlayerColor) {}
 	
 	/// Requests a move from the delegate. This method
 	/// should implement the "main" game logic.
-	fn move_request(&mut self, state: &Self::GameState, me: &Self::Player, opponent: &Self::Player) -> Self::Move;
+	fn move_request(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, me: &<Self::Plugin as SCPlugin>::Player, opponent: &<Self::Plugin as SCPlugin>::Player) -> <Self::Plugin as SCPlugin>::Move;
 }
 
 /// The client which handles XML requests, manages
