@@ -5,7 +5,7 @@ use xml::reader::{XmlEvent as XmlReadEvent, EventReader};
 use xml::writer::{EventWriter};
 use crate::xml_node::{XmlNode, FromXmlNode};
 use crate::util::SCResult;
-use crate::plugin::SCPlugin;
+use crate::plugin::{SCPlugin, HasPlayerColor};
 use crate::protocol::{Joined, Left, Room, Data, GameResult};
 
 /// A handler that implements the game player's
@@ -36,14 +36,13 @@ pub trait SCClientDelegate {
 pub struct SCClient<D> where D: SCClientDelegate {
 	delegate: D,
 	debug_mode: bool,
-	my_color: Option<<D::Plugin as SCPlugin>::PlayerColor>,
 	game_state: Option<<D::Plugin as SCPlugin>::GameState>
 }
 
 impl<D> SCClient<D> where D: SCClientDelegate {
 	/// Creates a new client using the specified delegate.
 	pub fn new(delegate: D, debug_mode: bool) -> Self {
-		Self { delegate: delegate, debug_mode: debug_mode, my_color: None, game_state: None }
+		Self { delegate: delegate, debug_mode: debug_mode, game_state: None }
 	}
 	
 	/// Blocks the thread and begins reading XML messages
@@ -101,7 +100,6 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 					Data::WelcomeMessage { color } => {
 						info!("Got welcome message with color: {:?}", color);
 						self.delegate.on_welcome_message(&color);
-						self.my_color = Some(color);
 					},
 					Data::Memento { state } => {
 						info!("Got updated game state");
@@ -111,17 +109,13 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 					Data::MoveRequest => {
 						info!("Got move request");
 						if let Some(ref state) = self.game_state {
-							if let Some(my_color) = self.my_color {
-								let new_move = self.delegate.request_move(state, my_color);
-								let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
-									room_id: room.room_id,
-									data: Data::Move(new_move)
-								})?;
-								debug!("Sending move {:#?}", move_node);
-								move_node.write_to(&mut xml_writer)?;
-							} else {
-								error!("Cannot fulfill move request without a color!");
-							}
+							let new_move = self.delegate.request_move(state, state.player_color());
+							let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
+								room_id: room.room_id,
+								data: Data::Move(new_move)
+							})?;
+							debug!("Sending move {:#?}", move_node);
+							move_node.write_to(&mut xml_writer)?;
 						} else {
 							error!("Cannot fulfill move request without a game state!");
 						}
