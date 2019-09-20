@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
-use socha_client_base::xml_node::XmlNode;
+use std::collections::HashMap;
 use socha_client_base::hashmap;
 
 /// Axial coordinates on the hex grid.
@@ -240,4 +240,10 @@ impl From<CubeCoords> for AxialCoords {
 
 impl From<AxialCoords> for CubeCoords {
 	fn from(coords: AxialCoords) -> Self { Self { x: coords.x, y: coords.y, z: -(coords.x + coords.y) } }
+}
+
+impl From<CubeCoords> for HashMap<String, String> {
+	fn from(coords: CubeCoords) -> Self {
+		hashmap!["x" => coords.x.to_string(), "y" => coords.y.to_string(), "z" => coords.z.to_string()]
+	}
 }

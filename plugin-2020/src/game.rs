@@ -5,7 +5,6 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
-use socha_client_base::hashmap;
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode};
 use crate::util::{AxialCoords, CubeCoords, LineFormable, Adjacentable};
@@ -630,33 +629,25 @@ impl FromXmlNode for Piece {
 impl From<Move> for XmlNode {
 	fn from(game_move: Move) -> Self {
 		match game_move {
-			Move::SetMove { piece, destination } => Self::new(
-				"data",
-				"",
-				hashmap!["class" => "setmove"],
-				vec![piece.into(), Self::new(
-					"destination",
-					"",
-					hashmap![]
-				)]
-			),
-			Move::DragMove { start, destination } => Self::new(
-				"data",
-				"",
-				hashmap!["class" => "dragmove"]
-				vec![CubeCoords::from(start).into(), CubeCoords::from(destination).into()]
-			)
+			Move::SetMove { piece, destination } => Self::new("data")
+				.attribute("class", "setmove")
+				.child(piece)
+				.child(Self::new("destination").attributes(CubeCoords::from(destination)))
+				.build(),
+			Move::DragMove { start, destination } => Self::new("data")
+				.attribute("class", "dragmove")
+				.child(Self::new("start").attributes(CubeCoords::from(start)))
+				.child(Self::new("destination").attributes(CubeCoords::from(destination)))
+				.build()
 		}
 	}
 }
 
 impl From<Piece> for XmlNode {
 	fn from(piece: Piece) -> Self {
-		Self::new(
-			"piece",
-			"",
-			hashmap!["owner" => piece.owner, "type" => piece.piece_type],
-			vec![]
-		)
+		Self::new("piece")
+			.attribute("owner", piece.owner)
+			.attribute("type", piece.piece_type)
+			.build()
 	}
 }
