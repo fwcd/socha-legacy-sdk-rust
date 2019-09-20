@@ -1,6 +1,6 @@
 //! The game structures for the "Hive" game.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque, hash_set::Intersection, hash_map::RandomState};
 use std::str::FromStr;
 use std::ops::{Add, Sub, Mul};
 use socha_client_base::util::{SCResult, HasOpponent};
@@ -9,14 +9,14 @@ use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode};
 
 /// A player color in the game.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum PlayerColor {
 	Red,
 	Blue
 }
 
 /// Metadata about a player.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Player {
 	pub color: PlayerColor,
 	pub display_name: String
@@ -63,7 +63,7 @@ pub struct Board {
 }
 
 /// A field on the game board.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
 	piece_stack: Vec<Piece>,
 	pub is_obstructed: bool
@@ -77,14 +77,14 @@ pub enum Move<C=AxialCoords> {
 }
 
 /// A game piece.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Piece {
 	pub owner: PlayerColor,
 	pub piece_type: PieceType
 }
 
 /// A game piece type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum PieceType {
 	Ant,
 	Bee,
@@ -212,13 +212,8 @@ impl Board {
 		}
 	}
 	
-	/// Performs a breadth-first search over the connected
-	/// fields satisfying the `field_condition` on the board
-	/// starting at the given coordinates.
-	/// 
-	/// Returns whether any field satisfying the `search_condition`
-	/// was found.
-	fn bfs_any(&self, start: AxialCoords, field_condition: impl Fn(AxialCoords, &Field) -> bool, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
+	/// Performs a breadth-first search over accessible fields.
+	fn bfs_accessible(&self, start: AxialCoords, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
 		let mut queue = VecDeque::new();
 		let mut visited = HashSet::new();
 		queue.push_back(start);
@@ -227,12 +222,10 @@ impl Board {
 			visited.insert(coords);
 
 			if let Some(field) = self.field(coords) {
-				if field_condition(coords, field) {
-					if search_condition(coords, field) {
-						return true;
-					} else {
-						queue.extend(self.neighbors(coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
-					}
+				if search_condition(coords, field) {
+					return true;
+				} else {
+					queue.extend(self.accessible_neighbors(coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
 				}
 			}
 		}
@@ -240,20 +233,38 @@ impl Board {
 		false
 	}
 	
+	/// Finds the intersection between `a`'s and `b`'s neighbors.
+	pub fn shared_neighbors(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> Intersection<(AxialCoords, &Field), RandomState> {
+		let a_neighbors: HashSet<_> = self.neighbors(a).collect();
+		let b_neighbors: HashSet<_> = self.neighbors(b).collect();
+		a_neighbors.intersection(&b_neighbors)
+	}
+	
+	/// Tests whether a move between the given two
+	/// locations is possible.
+	pub fn can_move_between(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> bool {
+		let shared = self.shared_neighbors(a, b);
+		(shared.count() == 1 || shared.any(|(_, f)| !f.is_obstructed)) && shared.any(|(_, f)| f.has_pieces())
+	}
+	
+	/// Finds the accessible neighbors.
+	pub fn accessible_neighbors(&self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.neighbors(coords).filter(|(c, _)| self.can_move_between(coords, *c))
+	}
+	
 	/// Tests whether two coordinates are connected by a path
 	/// along the swarm's boundary.
 	pub fn connected_by_boundary_path(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
 		let start = start_coords.into();
 		let destination = destination_coords.into();
-		self.bfs_any(start, |c, f| !f.is_obstructed && self.is_next_to_piece(c), |c, f| c == destination && c != start)
+		self.bfs_accessible(start, |c, f| c == destination)
 	}
 	
 	/// Performs a depth-first search on the board at the given
 	/// position to test whether the swarm is connected.
 	pub fn is_swarm_connected(&self) -> bool {
 		let mut unvisited = self.fields.iter()
-			.filter_map(|(c, f)| if f.has_pieces() { Some(c) } else { None })
-			.cloned()
+			.filter_map(|(&c, f)| if f.has_pieces() { Some(c) } else { None })
 			.collect::<HashSet<AxialCoords>>();
 
 		if let Some(start) = unvisited.iter().next() {
