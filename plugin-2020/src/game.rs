@@ -2,7 +2,7 @@
 
 use arrayvec::ArrayVec;
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet, VecDeque, hash_set::Intersection, hash_map::RandomState};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::hashmap;
@@ -83,10 +83,10 @@ pub enum PieceType {
 
 // Constants
 
-const ROUND_LIMIT: usize = 30;
-const BOARD_RADIUS: usize = 6;
-const FIELD_COUNT: usize = 91; // def count(radius): 1 if (radius == 1) else (radius - 1) * 6 + count(radius - 1)
-const INITIAL_PIECE_TYPES: [PieceType; 11] = [
+pub const ROUND_LIMIT: usize = 30;
+pub const BOARD_RADIUS: usize = 6;
+pub const FIELD_COUNT: usize = 91; // def count(radius): 1 if (radius == 1) else (radius - 1) * 6 + count(radius - 1)
+pub const INITIAL_PIECE_TYPES: [PieceType; 11] = [
 	PieceType::Bee,
 	PieceType::Spider,
 	PieceType::Spider,
@@ -141,6 +141,11 @@ impl Board {
 		self.fields.get(&coords.into())
 	}
 	
+	/// Mutably borrows a field.
+	pub fn field_mut(&mut self, coords: impl Into<AxialCoords>) -> Option<&mut Field> {
+		self.fields.get_mut(&coords.into())
+	}
+	
 	/// Tests whether a given position is occupied.
 	pub fn is_occupied(&self, coords: impl Into<AxialCoords>) -> bool {
 		self.field(coords).map(|f| f.is_occupied()).unwrap_or(true)
@@ -159,7 +164,7 @@ impl Board {
 	/// Fetches empty fields connected to the swarm.
 	pub fn swarm_boundary(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
 		self.fields().filter(|(_, f)| f.is_occupied())
-			.flat_map(|(c, _)| self.empty_neighbors(c))
+			.flat_map(move |(c, _)| self.empty_neighbors(c))
 	}
 	
 	/// Fetches all fields.
@@ -177,7 +182,7 @@ impl Board {
 	/// Fetches the (existing) neighbor fields on the board.
 	#[inline]
 	pub fn neighbors<'a>(&'a self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
-		coords.into().coord_neighbors().iter().filter_map(|&c| self.field(c).map(|f| (c, f)))
+		coords.into().coord_neighbors().into_iter().filter_map(move |c| self.field(c).map(|f| (c, f)))
 	}
 	
 	/// Fetches the unoccupied neighbor fields.
@@ -206,16 +211,16 @@ impl Board {
 	fn set_move_destinations<'a>(&'a self, color: PlayerColor) -> impl Iterator<Item=AxialCoords> + 'a {
 		let opponent = color.opponent();
 		self.fields_owned_by(color)
-			.flat_map(|(c, _)| self.empty_neighbors(c))
+			.flat_map(move |(c, _)| self.empty_neighbors(c))
 			.unique()
-			.filter_map(|(c, _)| if self.is_next_to(opponent, c) { None } else { Some(c) })
+			.filter_map(move |(c, _)| if self.is_next_to(opponent, c) { None } else { Some(c) })
 	}
 	
 	/// Performs a depth-first search on the board's non-empty fields
 	/// starting at the given coordinates and removing visited
 	/// locations from the set.
 	fn dfs_swarm(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>) {
-		if let Some(field) = self.field(coords).filter(|f| f.has_pieces()) {
+		if self.field(coords).filter(|f| f.has_pieces()).is_some() {
 			unvisited.remove(&coords);
 			for (neighbor, _) in self.neighbors(coords) {
 				if unvisited.contains(&neighbor) {
@@ -252,16 +257,16 @@ impl Board {
 	fn bfs_reachable_in_3_steps(&self, start: AxialCoords, destination: AxialCoords) -> bool {
 		let mut paths_queue: VecDeque<ArrayVec<[AxialCoords; 3]>> = VecDeque::new();
 		paths_queue.push_back({
-			let path = ArrayVec::new();
+			let mut path = ArrayVec::new();
 			path.push(start);
 			path
 		});
 
 		while let Some(path) = paths_queue.pop_front() {
-			let neighbors = self.accessible_neighbors(path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
+			let mut neighbors = self.accessible_neighbors(path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
 			if path.len() < 3 {
 				paths_queue.extend(neighbors.map(|(c, _)| {
-					let next_path = ArrayVec::new();
+					let mut next_path = ArrayVec::new();
 					next_path.push(c);
 					next_path
 				}));
@@ -274,22 +279,22 @@ impl Board {
 	}
 	
 	/// Finds the intersection between `a`'s and `b`'s neighbors.
-	pub fn shared_neighbors(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> Intersection<(AxialCoords, &Field), RandomState> {
+	pub fn shared_neighbors(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> Vec<(AxialCoords, &Field)> {
 		let a_neighbors: HashSet<_> = self.neighbors(a).collect();
 		let b_neighbors: HashSet<_> = self.neighbors(b).collect();
-		a_neighbors.intersection(&b_neighbors)
+		a_neighbors.intersection(&b_neighbors).cloned().collect()
 	}
 	
 	/// Tests whether a move between the given two
 	/// locations is possible.
 	pub fn can_move_between(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> bool {
 		let shared = self.shared_neighbors(a, b);
-		(shared.count() == 1 || shared.any(|(_, f)| !f.is_obstructed)) && shared.any(|(_, f)| f.has_pieces())
+		(shared.len() == 1 || shared.iter().any(|(_, f)| !f.is_obstructed)) && shared.iter().any(|(_, f)| f.has_pieces())
 	}
 	
 	/// Finds the accessible neighbors.
-	pub fn accessible_neighbors(&self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> {
-		self.neighbors(coords).filter(|(c, _)| self.can_move_between(coords, *c))
+	pub fn accessible_neighbors<'a>(&'a self, coords: impl Into<AxialCoords> + Copy + 'a) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
+		self.neighbors(coords).filter(move |(c, _)| self.can_move_between(coords, *c))
 	}
 	
 	/// Tests whether two coordinates are connected by a path
@@ -297,7 +302,7 @@ impl Board {
 	pub fn connected_by_boundary_path(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
 		let start = start_coords.into();
 		let destination = destination_coords.into();
-		self.bfs_accessible(start, |c, f| c == destination)
+		self.bfs_accessible(start, |c, _| c == destination)
 	}
 	
 	/// Performs a depth-first search on the board at the given
@@ -352,7 +357,7 @@ impl GameState {
 	
 	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
 		self.validate_adjacent(start, destination)?;
-		if self.board.shared_neighbors(start, destination).any(|(_, f)| f.has_pieces()) || self.board.field(destination).map(|f| f.has_pieces()).unwrap_or(false) {
+		if self.board.shared_neighbors(start, destination).iter().any(|(_, f)| f.has_pieces()) || self.board.field(destination).map(|f| f.has_pieces()).unwrap_or(false) {
 			Ok(())
 		} else {
 			Err("Beetle has to move along swarm".into())
@@ -419,10 +424,10 @@ impl GameState {
 			} else if self.board.field(destination).and_then(|f| f.piece()).map(|p| p.piece_type == PieceType::Beetle).unwrap_or(false) {
 				Err("Only beetles can climb other pieces".into())
 			} else if {
-				let without_piece = self.board.clone();
-				without_piece.field(start).ok_or_else(|| "Start field does not exist")?.pop();
-				Ok(!without_piece.is_swarm_connected())
-			}? {
+				let mut without_piece = self.board.clone();
+				without_piece.field_mut(start).ok_or_else(|| "Start field does not exist")?.pop();
+				!without_piece.is_swarm_connected()
+			} {
 				Err("Drag move would disconnect the swarm".into())
 			} else {
 				match dragged_piece.piece_type {
@@ -469,20 +474,33 @@ impl GameState {
 				.collect()
 		} else {
 			destinations.iter()
-				.flat_map(|&c| undeployed.iter().map(|&p| Move::SetMove { piece: p, destination: c }))
+				.flat_map(|&c| undeployed.iter().map(move |&p| Move::SetMove { piece: p, destination: c }))
 				.collect()
 		}
 	}
 	
+	/// Returns the validated move.
+	fn validated(&self, color: PlayerColor, game_move: Move) -> SCResult<Move> {
+		self.validate_move(color, game_move).map(|_| game_move)
+	}
+	
 	/// Fetches a list of possible `DragMove`s.
-	fn possible_drag_moves(&self, color: PlayerColor) -> impl Iterator<Item=Move> {
-		unimplemented!()
+	fn possible_drag_moves(&self, color: PlayerColor) -> Vec<Move> {
+		self.board.fields_owned_by(color).flat_map(|(start_coords, start_field)| {
+			let mut targets: Vec<_> = self.board.swarm_boundary().collect();
+
+			if start_field.piece().filter(|f| f.piece_type == PieceType::Beetle).is_some() {
+				targets.extend(self.board.neighbors(start_coords));
+			}
+			
+			targets.into_iter()
+				.filter_map(move |(c, _)| self.validated(color, Move::DragMove { start: start_coords, destination: c }).ok())
+		}).collect()
 	}
 	
 	/// Fetches a list of possible moves for a given color.
 	pub fn possible_moves(&self, color: PlayerColor) -> Vec<Move> {
-		let moves = Vec::new();
-		moves.extend(self.possible_set_moves(color));
+		let mut moves = self.possible_set_moves(color);
 		moves.extend(self.possible_drag_moves(color));
 		moves
 	}
@@ -579,11 +597,11 @@ impl FromXmlNode for Board {
 			fields: node.child_by_name("fields")?
 				.childs_by_name("field")
 				.map(|f| Ok((
-					CubeCoords {
-						x: f.attribute("x")?.parse()?,
-						y: f.attribute("y")?.parse()?,
-						z: f.attribute("z")?.parse()?
-					}.into(),
+					CubeCoords::new(
+						f.attribute("x")?.parse()?,
+						f.attribute("y")?.parse()?,
+						f.attribute("z")?.parse()?
+					).into(),
 					Field::from_node(f)?
 				)))
 				.collect::<SCResult<HashMap<AxialCoords, Field>>>()?

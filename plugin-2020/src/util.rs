@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
 use socha_client_base::xml_node::XmlNode;
 use socha_client_base::hashmap;
@@ -58,15 +59,15 @@ impl AxialCoords {
 	/// Fetches all 6 neighbors, regardless of any board
 	/// boundaries.
 	#[inline]
-	pub fn coord_neighbors(self) -> [AxialCoords; 6] {
-		[
+	pub fn coord_neighbors(self) -> ArrayVec<[AxialCoords; 6]> {
+		ArrayVec::from([
 			self + AxialCoords::new(-1, 0),
 			self + AxialCoords::new(0, 1),
 			self + AxialCoords::new(1, 1),
 			self + AxialCoords::new(1, 0),
 			self + AxialCoords::new(0, -1),
 			self + AxialCoords::new(-1, -1)
-		]
+		])
 	}
 }
 
@@ -159,7 +160,10 @@ impl Sub for AxialCoords {
 impl<R> Mul<R> for AxialCoords where R: Into<i32> {
 	type Output = Self;
 	
-	fn mul(self, rhs: R) -> Self { Self { x: self.x * rhs.into(), y: self.y * rhs.into() } }
+	fn mul(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x * other, y: self.y * other }
+	}
 }
 
 impl AddAssign for AxialCoords {
@@ -199,7 +203,10 @@ impl Sub for CubeCoords {
 impl<R> Mul<R> for CubeCoords where R: Into<i32> {
 	type Output = Self;
 	
-	fn mul(self, rhs: R) -> Self { Self { x: self.x * rhs.into(), y: self.y * rhs.into(), z: self.z * rhs.into() } }
+	fn mul(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x * other, y: self.y * other, z: self.z * other }
+	}
 }
 
 impl AddAssign for CubeCoords {
