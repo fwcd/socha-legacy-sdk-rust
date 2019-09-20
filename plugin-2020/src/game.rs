@@ -212,26 +212,32 @@ impl Board {
 		}
 	}
 	
-	/// Performs a depth-first search over the connected
+	/// Performs a breadth-first search over the connected
 	/// fields satisfying the `field_condition` on the board
-	/// starting at the given coordinates and adding
-	/// visited locations to the set.
+	/// starting at the given coordinates.
 	/// 
 	/// Returns whether any field satisfying the `search_condition`
 	/// was found.
-	fn dfs_any(&self, coords: AxialCoords, visited: &mut HashSet<AxialCoords>, field_condition: impl Fn(AxialCoords, &Field) -> bool, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
-		if let Some(field) = self.field(coords) {
-			if field_condition(coords, field) {
-				visited.insert(coords);
-				if search_condition(coords, field) {
-					true
-				} else {
-					self.neighbors(coords)
-						.filter(|(c, _)| !visited.contains(c))
-						.any(|(c, _)| self.dfs_any(c, visited, field_condition, search_condition))
+	fn bfs_any(&self, start: AxialCoords, field_condition: impl Fn(AxialCoords, &Field) -> bool, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
+		let mut queue = VecDeque::new();
+		let mut visited = HashSet::new();
+		queue.push_back(start);
+		
+		while let Some(coords) = queue.pop_front() {
+			visited.insert(coords);
+
+			if let Some(field) = self.field(coords) {
+				if field_condition(coords, field) {
+					if search_condition(coords, field) {
+						return true;
+					} else {
+						queue.extend(self.neighbors(coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
+					}
 				}
-			} else { false }
-		} else { false }
+			}
+		}
+
+		false
 	}
 	
 	/// Tests whether two coordinates are connected by a path
@@ -239,8 +245,7 @@ impl Board {
 	pub fn connected_by_boundary_path(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
 		let start = start_coords.into();
 		let destination = destination_coords.into();
-		let mut visited = HashSet::new();
-		self.dfs_any(start, &mut visited, |c, f| !f.is_obstructed && self.is_next_to_piece(c), |c, f| c == destination && c != start)
+		self.bfs_any(start, |c, f| !f.is_obstructed && self.is_next_to_piece(c), |c, f| c == destination && c != start)
 	}
 	
 	/// Performs a depth-first search on the board at the given
@@ -299,10 +304,9 @@ impl GameState {
 			PlayerColor::Red => &self.red_player,
 			PlayerColor::Blue => &self.blue_player
 		}
-	}
-	
+	} 
 	/// Fetches the current _round_ (which is half the turn).
-	pub fn round(&self) -> u32 { self.turn / 2 }
+	 pub fn round(&self) -> u32 { self.turn / 2 }
 
 	// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
 
