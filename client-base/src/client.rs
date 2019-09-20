@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::net::TcpStream;
 use std::io::{self, BufWriter, BufReader, Read, Write};
 use log::{info, debug, warn, error};
@@ -111,7 +112,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 							info!("Got move request");
 							if let Some(ref state) = self.game_state {
 								let new_move = self.delegate.request_move(state, state.player_color());
-								let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
+								let move_node = XmlNode::try_from(Room::<D::Plugin> {
 									room_id: room.room_id,
 									data: Data::Move(new_move)
 								})?;

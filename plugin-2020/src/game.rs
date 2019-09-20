@@ -631,15 +631,19 @@ impl From<Move> for XmlNode {
 	fn from(game_move: Move) -> Self {
 		match game_move {
 			Move::SetMove { piece, destination } => Self::new(
-				"setmove",
+				"data",
 				"",
-				HashMap::new(),
-				vec![piece.into(), CubeCoords::from(destination).into()]
+				hashmap!["class" => "setmove"],
+				vec![piece.into(), Self::new(
+					"destination",
+					"",
+					hashmap![]
+				)]
 			),
 			Move::DragMove { start, destination } => Self::new(
-				"dragmove",
+				"data",
 				"",
-				HashMap::new(),
+				hashmap!["class" => "dragmove"]
 				vec![CubeCoords::from(start).into(), CubeCoords::from(destination).into()]
 			)
 		}
@@ -651,7 +655,7 @@ impl From<Piece> for XmlNode {
 		Self::new(
 			"piece",
 			"",
-			hashmap!["owner".to_owned() => piece.owner.into(), "type".to_owned() => piece.piece_type.into()],
+			hashmap!["owner" => piece.owner, "type" => piece.piece_type],
 			vec![]
 		)
 	}

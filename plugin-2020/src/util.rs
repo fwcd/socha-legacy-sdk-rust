@@ -241,14 +241,3 @@ impl From<CubeCoords> for AxialCoords {
 impl From<AxialCoords> for CubeCoords {
 	fn from(coords: AxialCoords) -> Self { Self { x: coords.x, y: coords.y, z: -(coords.x + coords.y) } }
 }
-
-impl From<CubeCoords> for XmlNode {
-	fn from(coords: CubeCoords) -> Self {
-		Self::new(
-			"CubeCoordinates",
-			"",
-			hashmap!["x".to_owned() => coords.x().to_string(), "y".to_owned() => coords.y().to_string(), "z".to_owned() => coords.z().to_string()],
-			vec![]
-		)
-	}
-}

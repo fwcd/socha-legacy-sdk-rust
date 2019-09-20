@@ -1,8 +1,10 @@
 use std::collections::{HashMap, VecDeque};
+use std::convert::TryInto;
 use std::io::{Read, Write};
 use xml::reader::{EventReader, XmlEvent as XmlReadEvent};
 use xml::writer::{EventWriter, XmlEvent as XmlWriteEvent};
 use crate::util::SCResult;
+use crate::error::SCError;
 
 /// A deserialized, in-memory tree-representation
 /// of an XML node.
@@ -14,11 +16,24 @@ pub struct XmlNode {
 	childs: Vec<XmlNode>
 }
 
+/// A builder that makes the construction of new
+/// XML nodes more convenient.
+pub struct XmlNodeBuilder<'a> {
+	name: &'a str,
+	data: &'a str,
+	attributes: HashMap<String, String>,
+	childs: Vec<XmlNode>
+}
+
+/// Indicates that the type can be created from an XML node.
+pub trait FromXmlNode where Self: Sized {
+	fn from_node(node: &XmlNode) -> SCResult<Self>;
+}
+
 impl XmlNode {
-	/// Creates a new XML node using the specified
-	/// parameters.
-	pub fn new(name: &str, data: &str, attributes: impl Into<HashMap<String, String>>, childs: impl Into<Vec<XmlNode>>) -> Self {
-		Self { name: name.to_owned(), data: data.to_owned(), attributes: attributes.into(), childs: childs.into() }
+	/// Creates a new XML node builder.
+	pub fn new(name: &str) -> XmlNodeBuilder {
+		XmlNodeBuilder::new(name)
 	}
 
 	/// Deserializes an XML node tree
@@ -100,7 +115,61 @@ impl XmlNode {
 	}
 }
 
-/// Indicates that the type can be created from an XML node.
-pub trait FromXmlNode where Self: Sized {
-	fn from_node(node: &XmlNode) -> SCResult<Self>;
+
+impl<'a> XmlNodeBuilder<'a> {
+	/// Creates a new XML node builder with the
+	/// specified tag name.
+	pub fn new(name: &'a str) -> Self {
+		Self { name: name, data: "", attributes: HashMap::new(), childs: Vec::new() }
+	}
+	
+	/// Sets the contents of the XML node.
+	pub fn data(mut self, data: &'a str) -> Self {
+		self.data = data;
+		self
+	}
+	
+	/// Uses the specified attributes.
+	pub fn attributes(mut self, attributes: impl Into<HashMap<String, String>>) -> Self {
+		self.attributes = attributes.into();
+		self
+	}
+	
+	/// Adds the specified attribute.
+	pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+		self.attributes.insert(key.into(), value.into());
+		self
+	}
+	
+	/// Uses the specified children.
+	pub fn childs(mut self, childs: impl Into<Vec<XmlNode>>) -> Self {
+		self.childs = childs.into();
+		self
+	}
+	
+	/// Adds the specified child.
+	pub fn child(mut self, child: impl Into<XmlNode>) -> Self {
+		self.childs.push(child.into());
+		self
+	}
+	
+	/// Tries adding the specified child.
+	pub fn try_child(mut self, child: impl TryInto<XmlNode, Error=SCError>) -> SCResult<Self> {
+		self.childs.push(child.try_into()?);
+		Ok(self)
+	}
+	
+	/// Builds the XML node.
+	pub fn build(self) -> XmlNode {
+		XmlNode {
+			name: self.name.to_owned(),
+			data: self.data.to_owned(),
+			attributes: self.attributes,
+			childs: self.childs
+		}
+	}
+}
+
+impl<'a> From<XmlNodeBuilder<'a>> for XmlNode {
+	fn from(builder: XmlNodeBuilder<'a>) -> Self { builder.build() }
 }

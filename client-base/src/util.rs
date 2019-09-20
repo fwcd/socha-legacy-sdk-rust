@@ -1,6 +1,7 @@
 use crate::error::SCError;
 
-/// Creates a new HashMap using a literal-like syntax.
+/// Creates a new HashMap using a literal-like syntax. It automatically
+/// performs `Into` conversions for convenience.
 /// 
 /// Source: https://stackoverflow.com/questions/27582739/how-do-i-create-a-hashmap-literal
 #[macro_export]
@@ -8,7 +9,7 @@ macro_rules! hashmap {
 	[ $($key:expr => $value:expr),* ] => {{
 		let mut m = ::std::collections::HashMap::new();
 		$(
-			m.insert($key, $value);
+			m.insert($key.into(), $value.into());
 		)+
 		m
 	}}
