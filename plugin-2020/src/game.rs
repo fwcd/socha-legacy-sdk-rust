@@ -186,18 +186,44 @@ impl Board {
 		self.fields().flat_map(|(_, f)| f.piece_stack()).any(|p| p.owner == color)
 	}
 	
-	/// Performs an "inverted" depth-first search on the board
+	/// Performs a depth-first search on the board's non-empty fields
 	/// starting at the given coordinates and removing visited
 	/// locations from the set.
-	fn inv_dfs_swarm(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>) {
+	fn dfs_swarm(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>) {
 		if let Some(field) = self.field(coords).filter(|f| f.has_pieces()) {
 			unvisited.remove(&coords);
 			for (neighbor, _) in self.neighbors(coords) {
 				if unvisited.contains(&neighbor) {
-					self.inv_dfs_swarm(neighbor, unvisited)
+					self.dfs_swarm(neighbor, unvisited)
 				}
 			}
 		}
+	}
+	
+	
+	/// Performs a depth-first search on the board
+	/// starting at the given coordinates and removing
+	/// visited locations from the set. If there are
+	/// any reachable nodes which satisfy
+	fn dfs_any(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
+		if let Some(field) = self.field(coords) {
+			unvisited.remove(&coords);
+			if search_condition(coords, field) {
+				true
+			} else {
+				self.neighbors(coords)
+					.filter(|(c, _)| unvisited.contains(c))
+					.any(|(c, _)| self.dfs_any(c, unvisited, search_condition))
+			}
+		} else { false }
+	}
+	
+	/// Tests whether two coordinates are connected by empty fields on the board.
+	pub fn connected_by_empty(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
+		let start = start_coords.into();
+		let destination = destination_coords.into();
+		let mut unvisited = self.fields().filter_map(|(&c, f)| if !f.is_obstructed { Some(c) } else { None }).collect::<HashSet<_>>();
+		self.dfs_any(start, &mut unvisited, |c, f| c == destination && c != start)
 	}
 	
 	/// Performs a depth-first search on the board at the given
@@ -209,7 +235,7 @@ impl Board {
 			.collect::<HashSet<AxialCoords>>();
 
 		if let Some(start) = unvisited.iter().next() {
-			self.inv_dfs_swarm(*start, &mut unvisited);
+			self.dfs_swarm(*start, &mut unvisited);
 			unvisited.is_empty()
 		} else {
 			true // An empty swarm is connected
@@ -266,7 +292,7 @@ impl GameState {
 	fn validate_set_move(&self, color: PlayerColor, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
 		let destination = destination_coords.into();
 		if !self.board.contains_coords(destination) {
-			Err(format!("Move destination out of bounds: {:?}", destination).into())
+			Err(format!("Move destination is out of bounds: {:?}", destination).into())
 		} else if self.board.field(destination).map(|f| f.is_obstructed).unwrap_or(true) {
 			Err(format!("Move destination is obstructed: {:?}", destination).into())
 		} else if !self.board.fields().any(|(_, f)| f.has_pieces()) {
@@ -293,15 +319,68 @@ impl GameState {
 		}
 	}
 	
+	fn validate_ant_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		// FIXME: Test for actual path along swarm instead of "just" searching for an empty path
+		if self.board.connected_by_empty(start, destination) { Ok(()) } else { Err("Could not find path for ant".into()) }
+	}
+	
+	fn validate_bee_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
+	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
+	fn validate_grasshopper_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
+	fn validate_spider_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
 	fn validate_drag_move(&self, color: PlayerColor, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
-		unimplemented!()
+		let start = start_coords.into();
+		let destination = destination_coords.into();
+		if !self.board.has_placed_bee(color) {
+			Err("Bee has to be placed before committing a drag move".into())
+		} else if !self.board.contains_coords(start) {
+			Err(format!("Move start is out of bounds: {:?}", start).into())
+		} else if !self.board.contains_coords(destination) {
+			Err(format!("Move destination is out of bounds: {:?}", destination).into())
+		} else if let Some(dragged_piece) = self.board.field(start).and_then(|f| f.piece()) {
+			if dragged_piece.owner != color {
+				Err("Cannot move opponent's piece".into())
+			} else if start == destination {
+				Err("Cannot move when start == destination".into())
+			} else if self.board.field(destination).and_then(|f| f.piece()).map(|p| p.piece_type == PieceType::Beetle).unwrap_or(false) {
+				Err("Only beetles can climb other pieces".into())
+			} else if {
+				let without_piece = self.board.clone();
+				without_piece.field(start).ok_or_else(|| "Start field does not exist")?.pop();
+				Ok(!without_piece.is_swarm_connected())
+			}? {
+				Err("Drag move would disconnect the swarm".into())
+			} else {
+				match dragged_piece.piece_type {
+					PieceType::Ant => self.validate_ant_move(start, destination),
+					PieceType::Bee => self.validate_bee_move(start, destination),
+					PieceType::Beetle => self.validate_beetle_move(start, destination),
+					PieceType::Grasshopper => self.validate_grasshopper_move(start, destination),
+					PieceType::Spider => self.validate_spider_move(start, destination)
+				}
+			}
+		} else {
+			Err("No piece to move".into())
+		}
 	}
 	
 	//// Tests whether the given move is valid.
 	pub fn validate_move(&self, color: PlayerColor, game_move: Move) -> SCResult<()> {
 		match game_move {
-			Move::SetMove { piece, destination } => self.validate_set_move(piece, destination),
-			Move::DragMove { start, destination } => self.validate_drag_move(start, destination)
+			Move::SetMove { piece, destination } => self.validate_set_move(color, piece, destination),
+			Move::DragMove { start, destination } => self.validate_drag_move(color, start, destination)
 		}
 	}
 	
