@@ -95,9 +95,9 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 			let node = XmlNode::read_from(&mut xml_reader)?;
 			debug!("Got XML node {:#?}", node);
 			
-			if let Ok(room) = <Room<D::Plugin>>::from_node(&node) {
-				// Got room message (the game is running)
-				match room.data {
+			// Try parsing as room message (the game is running)
+			match <Room<D::Plugin>>::from_node(&node) {
+				Ok(room) => match room.data {
 					Data::WelcomeMessage { color } => {
 						info!("Got welcome message with color: {:?}", color);
 						self.delegate.on_welcome_message(&color);
@@ -113,15 +113,17 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 						if let Some(ref state) = self.game_state {
 							if let Some(my_color) = self.my_color {
 								let new_move = self.delegate.request_move(state, my_color);
-								<SCResult<XmlNode>>::from(Room::<D::Plugin> {
+								let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
 									room_id: room.room_id,
 									data: Data::Move(new_move)
-								})?.write_to(&mut xml_writer)?;
+								})?;
+								debug!("Sending move {:#?}", move_node);
+								move_node.write_to(&mut xml_writer)?;
 							} else {
-								error!("Can not fulfill move request without a color!");
+								error!("Cannot fulfill move request without a color!");
 							}
 						} else {
-							error!("Can not fulfill move request without a game state!");
+							error!("Cannot fulfill move request without a game state!");
 						}
 					},
 					Data::GameResult(result) => {
@@ -129,13 +131,24 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 						self.delegate.on_game_end(result);
 					},
 					_ => warn!("Could not handle room data: {:?}", room.data)
+				},
+				Err(e) => {
+					debug!("Could not parse node as room: {:?}", e);
+
+					// Try parsing as 'joined' message
+					match Joined::from_node(&node) {
+						Ok(joined) => info!("Joined room {}", joined.room_id),
+						Err(e) => {
+							debug!("Could not parse node as 'joined': {:?}", e);
+
+							// Try parsing as 'left' message
+							match Left::from_node(&node) {
+								Ok(left) => info!("Left room {}", left.room_id),
+								Err(e) => debug!("Could not parse node as 'left': {:?}", e)
+							}
+						}
+					}
 				}
-			} else if let Ok(joined) = Joined::from_node(&node) {
-				// Got 'joined' message
-				info!("Joined room {}", joined.room_id);
-			} else if let Ok(left) = Left::from_node(&node) {
-				// Got 'left' message
-				info!("Left room {}", left.room_id);
 			}
 		}
 	}
