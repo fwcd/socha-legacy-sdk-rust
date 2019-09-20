@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 socha-client-base = { path = "../client-base" }
+arrayvec = "0.4.11"

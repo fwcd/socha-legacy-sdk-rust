@@ -1,5 +1,6 @@
 //! The game structures for the "Hive" game.
 
+use arrayvec::ArrayVec;
 use std::collections::{HashMap, HashSet, VecDeque, hash_set::Intersection, hash_map::RandomState};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
@@ -171,7 +172,8 @@ impl Board {
 		}
 	}
 	
-	/// Performs a breadth-first search over accessible fields.
+	/// Tests whether a field satisfying the search condition can be
+	/// reached by breadth-first searching the accessible fields.
 	fn bfs_accessible(&self, start: AxialCoords, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
 		let mut queue = VecDeque::new();
 		let mut visited = HashSet::new();
@@ -186,6 +188,32 @@ impl Board {
 				} else {
 					queue.extend(self.accessible_neighbors(coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
 				}
+			}
+		}
+
+		false
+	}
+	
+	/// Tests whether the given field can be reached in 3 moves
+	/// by breadth-first searching the accessible fields.
+	fn bfs_reachable_in_3_steps(&self, start: AxialCoords, destination: AxialCoords) -> bool {
+		let mut paths_queue: VecDeque<ArrayVec<[AxialCoords; 3]>> = VecDeque::new();
+		paths_queue.push_back({
+			let path = ArrayVec::new();
+			path.push(start);
+			path
+		});
+
+		while let Some(path) = paths_queue.pop_front() {
+			let neighbors = self.accessible_neighbors(path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
+			if path.len() < 3 {
+				paths_queue.extend(neighbors.map(|(c, _)| {
+					let next_path = ArrayVec::new();
+					next_path.push(c);
+					next_path
+				}));
+			} else if neighbors.any(|(c, _)| c == destination) {
+				return true;
 			}
 		}
 
@@ -293,7 +321,7 @@ impl GameState {
 	}
 	
 	fn validate_spider_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
+		if self.board.bfs_reachable_in_3_steps(start, destination) { Ok(()) } else { Err("No 3-step path found for Spider move".into()) }
 	}
 
 	fn validate_set_move(&self, color: PlayerColor, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
