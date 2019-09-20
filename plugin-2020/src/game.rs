@@ -1,6 +1,7 @@
 //! The game structures for the "Hive" game.
 
 use arrayvec::ArrayVec;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet, VecDeque, hash_set::Intersection, hash_map::RandomState};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
@@ -8,6 +9,8 @@ use socha_client_base::hashmap;
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode};
 use crate::util::{AxialCoords, CubeCoords, LineFormable, Adjacentable};
+
+// Structures
 
 /// A player color in the game.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -78,6 +81,25 @@ pub enum PieceType {
 	Spider
 }
 
+// Constants
+
+const ROUND_LIMIT: usize = 30;
+const BOARD_RADIUS: usize = 6;
+const FIELD_COUNT: usize = 91; // def count(radius): 1 if (radius == 1) else (radius - 1) * 6 + count(radius - 1)
+const INITIAL_PIECE_TYPES: [PieceType; 11] = [
+	PieceType::Bee,
+	PieceType::Spider,
+	PieceType::Spider,
+	PieceType::Spider,
+	PieceType::Grasshopper,
+	PieceType::Grasshopper,
+	PieceType::Beetle,
+	PieceType::Beetle,
+	PieceType::Ant,
+	PieceType::Ant,
+	PieceType::Ant
+];
+
 // General implementations
 
 impl Field {
@@ -107,11 +129,14 @@ impl Field {
 	pub fn pop(&mut self) -> Option<Piece> { self.piece_stack.pop() }
 }
 
+// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
+	
 impl Board {
 	/// Fetches a reference to the field at the given
 	/// coordinates. The coordinates can be of and type
 	/// (e.g. axial/cube) as long as they are convertible
 	/// to axial coordinates.
+	#[inline]
 	pub fn field(&self, coords: impl Into<AxialCoords>) -> Option<&Field> {
 		self.fields.get(&coords.into())
 	}
@@ -122,23 +147,42 @@ impl Board {
 	}
 	
 	/// Fetches all fields owned by the given color.
-	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=(&AxialCoords, &Field)> {
-		self.fields.iter().filter(move |(_, f)| f.is_owned_by(color))
+	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.fields().filter(move |(_, f)| f.is_owned_by(color))
+	}
+	
+	/// Fetches all empty fields.
+	pub fn empty_fields(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.fields().filter(|(_, f)| !f.is_occupied())
+	}
+	
+	/// Fetches empty fields connected to the swarm.
+	pub fn swarm_boundary(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.fields().filter(|(_, f)| f.is_occupied())
+			.flat_map(|(c, _)| self.empty_neighbors(c))
 	}
 	
 	/// Fetches all fields.
-	pub fn fields(&self) -> impl Iterator<Item=(&AxialCoords, &Field)> {
-		self.fields.iter()
+	#[inline]
+	pub fn fields(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.fields.iter().map(|(&c, f)| (c, f))
 	}
 	
 	/// Tests whether the board contains the given coordinate.
+	#[inline]
 	pub fn contains_coords(&self, coords: impl Into<AxialCoords>) -> bool {
 		self.fields.contains_key(&coords.into())
 	}
 	
 	/// Fetches the (existing) neighbor fields on the board.
+	#[inline]
 	pub fn neighbors<'a>(&'a self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
 		coords.into().coord_neighbors().iter().filter_map(|&c| self.field(c).map(|f| (c, f)))
+	}
+	
+	/// Fetches the unoccupied neighbor fields.
+	pub fn empty_neighbors(&self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.neighbors(coords).filter(|(_, f)| !f.is_occupied())
 	}
 	
 	/// Tests whether the bee of the given color has been placed.
@@ -156,6 +200,15 @@ impl Board {
 	/// to a field.
 	pub fn is_next_to_piece(&self, coords: impl Into<AxialCoords>) -> bool {
 		self.neighbors(coords).any(|(_, f)| f.has_pieces())
+	}
+	
+	/// Fetches the possible destinations for a SetMove.
+	fn set_move_destinations<'a>(&'a self, color: PlayerColor) -> impl Iterator<Item=AxialCoords> + 'a {
+		let opponent = color.opponent();
+		self.fields_owned_by(color)
+			.flat_map(|(c, _)| self.empty_neighbors(c))
+			.unique()
+			.filter_map(|(c, _)| if self.is_next_to(opponent, c) { None } else { Some(c) })
 	}
 	
 	/// Performs a depth-first search on the board's non-empty fields
@@ -283,8 +336,6 @@ impl GameState {
 	/// Fetches the current _round_ (which is half the turn).
 	pub fn round(&self) -> u32 { self.turn / 2 }
 
-	// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
-	
 	/// Ensures that the destination is a direct neighbor of the start.
 	fn validate_adjacent(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
 		if start.is_adjacent_to(destination) { Ok(()) } else { Err("Coords are not adjacent to each other".into()) }
@@ -396,8 +447,31 @@ impl GameState {
 	}
 	
 	/// Fetches a list of possible `SetMove`s.
-	fn possible_set_moves(&self, color: PlayerColor) -> impl Iterator<Item=Move> {
-		unimplemented!()
+	fn possible_set_moves(&self, color: PlayerColor) -> Vec<Move> {
+		let undeployed = self.undeployed_pieces(color);
+		let opponent = color.opponent();
+		let destinations: Vec<_> = if undeployed.len() == INITIAL_PIECE_TYPES.len() {
+			// No pieces placed yet
+			if self.undeployed_pieces(opponent).len() == INITIAL_PIECE_TYPES.len() {
+				// First turn
+				self.board.empty_fields().map(|(c, _)| c).collect()
+			} else {
+				// Second turn
+				self.board.fields_owned_by(opponent).flat_map(|(c, _)| self.board.empty_neighbors(c)).map(|(c, _)| c).collect()
+			}
+		} else {
+			self.board.set_move_destinations(color).collect()
+		};
+		
+		if !self.board.has_placed_bee(color) && self.turn > 5 {
+			destinations.iter()
+				.map(|&c| Move::SetMove { piece: Piece { piece_type: PieceType::Bee, owner: color }, destination: c })
+				.collect()
+		} else {
+			destinations.iter()
+				.flat_map(|&c| undeployed.iter().map(|&p| Move::SetMove { piece: p, destination: c }))
+				.collect()
+		}
 	}
 	
 	/// Fetches a list of possible `DragMove`s.
