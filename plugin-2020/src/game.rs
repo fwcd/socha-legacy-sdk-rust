@@ -162,8 +162,8 @@ impl Board {
 	}
 	
 	/// Fetches all fields owned by the given color.
-	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=&Field> {
-		self.fields.values().filter(move |f| f.owner() == Some(color))
+	pub fn fields_owned_by(&self, color: PlayerColor) -> impl Iterator<Item=(&AxialCoords, &Field)> {
+		self.fields.iter().filter(move |(_, f)| f.is_owned_by(color))
 	}
 	
 	/// Fetches all fields.
@@ -177,8 +177,13 @@ impl Board {
 	}
 	
 	/// Fetches the (existing) neighbor fields on the board.
-	pub fn neighbors<'a>(&'a self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=AxialCoords> + 'a {
-		coords.into().coord_neighbors().iter().cloned().filter(|c| self.contains_coords(c.clone()))
+	pub fn neighbors<'a>(&'a self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
+		coords.into().coord_neighbors().iter().filter_map(|&c| self.field(c).map(|f| (c, f)))
+	}
+	
+	/// Tests whether the bee of the given color has been placed.
+	pub fn has_placed_bee(&self, color: PlayerColor) -> bool {
+		self.fields().flat_map(|(_, f)| f.piece_stack()).any(|p| p.owner == color)
 	}
 	
 	/// Performs an "inverted" depth-first search on the board
@@ -187,7 +192,7 @@ impl Board {
 	fn inv_dfs_swarm(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>) {
 		if let Some(field) = self.field(coords).filter(|f| f.has_pieces()) {
 			unvisited.remove(&coords);
-			for neighbor in self.neighbors(coords) {
+			for (neighbor, _) in self.neighbors(coords) {
 				if unvisited.contains(&neighbor) {
 					self.inv_dfs_swarm(neighbor, unvisited)
 				}
@@ -215,6 +220,9 @@ impl Board {
 impl Field {
 	/// Fetches the player color "owning" the field.
 	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
+	
+	/// Tests whether the field is owned by the given owner.
+	pub fn is_owned_by(&self, color: PlayerColor) -> bool { self.owner() == Some(color) }
 	
 	/// Fetches the top-most piece.
 	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
@@ -255,23 +263,45 @@ impl GameState {
 
 	// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
 
-	fn validate_set_move(&self, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
-		// let destination = destination_coords.into();
-		// if !self.board.contains_coords(destination) { return Err(format!("Move destination out of bounds: {:?}", destination).into()) }
-		// if self.board.field(destination).map(|f| f.is_obstructed).unwrap_or(true) { return Err(format!("Move destination is obstructed: {:?}", destination).into()) }
-		
-		unimplemented!()
+	fn validate_set_move(&self, color: PlayerColor, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
+		let destination = destination_coords.into();
+		if !self.board.contains_coords(destination) {
+			Err(format!("Move destination out of bounds: {:?}", destination).into())
+		} else if self.board.field(destination).map(|f| f.is_obstructed).unwrap_or(true) {
+			Err(format!("Move destination is obstructed: {:?}", destination).into())
+		} else if !self.board.fields().any(|(_, f)| f.has_pieces()) {
+			Ok(())
+		} else if self.board.fields_owned_by(color).count() == 0 {
+			let placed_next_to_opponent = self.board.fields_owned_by(color.opponent())
+				.flat_map(|(&c, _)| self.board.neighbors(c))
+				.any(|(c, _)| destination == c);
+			if placed_next_to_opponent {
+				Ok(())
+			} else {
+				Err("Piece has to be placed next to an opponent's piece".into())
+			}
+		} else if (self.round() == 3) && (!self.board.has_placed_bee(color)) && (piece.piece_type != PieceType::Bee) {
+			Err("Bee has to be placed in the fourth round or earlier".into())
+		} else if !self.undeployed_pieces(color).contains(&piece) {
+			Err("Piece is not undeployed".into())
+		} else if !self.board.neighbors(destination).any(|(_, f)| f.is_owned_by(color)) {
+			Err("Piece is not placed next to an own piece".into())
+		} else if self.board.neighbors(destination).any(|(_, f)| f.is_owned_by(color)) {
+			Err("Piece must not be placed next to an opponent's piece".into())
+		} else {
+			Ok(())
+		}
 	}
 	
-	fn validate_drag_move(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
+	fn validate_drag_move(&self, color: PlayerColor, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
 		unimplemented!()
 	}
 	
 	//// Tests whether the given move is valid.
-	pub fn validate_move(&self, game_move: Move) -> SCResult<()> {
+	pub fn validate_move(&self, color: PlayerColor, game_move: Move) -> SCResult<()> {
 		match game_move {
 			Move::SetMove { piece, destination } => self.validate_set_move(piece, destination),
-			Move::DragMove { start, destination } => self.validate_set_move(start, destination)
+			Move::DragMove { start, destination } => self.validate_drag_move(start, destination)
 		}
 	}
 	
