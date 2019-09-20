@@ -122,17 +122,17 @@ impl FromStr for ScoreCause {
 // XML conversions
 
 impl FromXmlNode for Joined {
-	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
+	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("roomId")?.to_owned() }) }
 }
 
 impl FromXmlNode for Left {
-	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("room_id")?.to_owned() }) }
+	fn from_node(node: &XmlNode) -> SCResult<Self> { Ok(Self { room_id: node.attribute("roomId")?.to_owned() }) }
 }
 
 impl<P> FromXmlNode for Room<P> where P: SCPlugin {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
-			room_id: node.attribute("room_id")?.to_owned(),
+			room_id: node.attribute("roomId")?.to_owned(),
 			data: <Data<P>>::from_node(node.child_by_name("data")?)?
 		})
 	}
