@@ -521,7 +521,7 @@ impl FromStr for PlayerColor {
 	type Err = SCError;
 
 	fn from_str(raw: &str) -> SCResult<Self> {
-		match raw {
+		match raw.to_uppercase().as_str() {
 			"RED" => Ok(Self::Red),
 			"BLUE" => Ok(Self::Blue),
 			_ => Err(format!("Did not recognize player color {}", raw).into())
@@ -542,7 +542,7 @@ impl FromStr for PieceType {
 	type Err = SCError;
 	
 	fn from_str(raw: &str) -> SCResult<Self> {
-		match raw {
+		match raw.to_uppercase().as_str() {
 			"ANT" => Ok(Self::Ant),
 			"BEE" => Ok(Self::Bee),
 			"BEETLE" => Ok(Self::Beetle),
