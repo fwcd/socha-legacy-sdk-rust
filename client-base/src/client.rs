@@ -94,55 +94,55 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 			let node = XmlNode::read_from(&mut xml_reader)?;
 			debug!("Got XML node {:#?}", node);
 			
-			// Try parsing as room message (the game is running)
-			match <Room<D::Plugin>>::from_node(&node) {
-				Ok(room) => match room.data {
-					Data::WelcomeMessage { color } => {
-						info!("Got welcome message with color: {:?}", color);
-						self.delegate.on_welcome_message(&color);
-					},
-					Data::Memento { state } => {
-						info!("Got updated game state");
-						self.delegate.on_update_state(&state);
-						self.game_state = Some(state);
-					},
-					Data::MoveRequest => {
-						info!("Got move request");
-						if let Some(ref state) = self.game_state {
-							let new_move = self.delegate.request_move(state, state.player_color());
-							let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
-								room_id: room.room_id,
-								data: Data::Move(new_move)
-							})?;
-							debug!("Sending move {:#?}", move_node);
-							move_node.write_to(&mut xml_writer)?;
-						} else {
-							error!("Cannot fulfill move request without a game state!");
-						}
-					},
-					Data::GameResult(result) => {
-						info!("Got game result: {:?}", result);
-						self.delegate.on_game_end(result);
-					},
-					_ => warn!("Could not handle room data: {:?}", room.data)
-				},
-				Err(e) => {
-					debug!("Could not parse node as room: {:?}", e);
-
-					// Try parsing as 'joined' message
-					match Joined::from_node(&node) {
-						Ok(joined) => info!("Joined room {}", joined.room_id),
-						Err(e) => {
-							debug!("Could not parse node as 'joined': {:?}", e);
-
-							// Try parsing as 'left' message
-							match Left::from_node(&node) {
-								Ok(left) => info!("Left room {}", left.room_id),
-								Err(e) => debug!("Could not parse node as 'left': {:?}", e)
+			match node.name() {
+				// Try parsing as room message (the game is running)
+				"room" => match <Room<D::Plugin>>::from_node(&node) {
+					Ok(room) => match room.data {
+						Data::WelcomeMessage { color } => {
+							info!("Got welcome message with color: {:?}", color);
+							self.delegate.on_welcome_message(&color);
+						},
+						Data::Memento { state } => {
+							info!("Got updated game state");
+							self.delegate.on_update_state(&state);
+							self.game_state = Some(state);
+						},
+						Data::MoveRequest => {
+							info!("Got move request");
+							if let Some(ref state) = self.game_state {
+								let new_move = self.delegate.request_move(state, state.player_color());
+								let move_node = <SCResult<XmlNode>>::from(Room::<D::Plugin> {
+									room_id: room.room_id,
+									data: Data::Move(new_move)
+								})?;
+								debug!("Sending move {:#?}", move_node);
+								move_node.write_to(&mut xml_writer)?;
+							} else {
+								error!("Cannot fulfill move request without a game state!");
 							}
-						}
-					}
-				}
+						},
+						Data::GameResult(result) => {
+							info!("Got game result: {:?}", result);
+							self.delegate.on_game_end(result);
+						},
+						_ => warn!("Could not handle room data: {:?}", room.data)
+					},
+					Err(e) => error!("Could not parse node as room: {:?}", e)
+				},
+
+				// Try parsing as 'joined' message
+				"joined" => match Joined::from_node(&node) {
+					Ok(joined) => info!("Joined room {}", joined.room_id),
+					Err(e) => error!("Could not parse node as 'joined': {:?}", e)
+				},
+
+				// Try parsing as 'left' message
+				"left" => match Left::from_node(&node) {
+					Ok(left) => info!("Left room {}", left.room_id),
+					Err(e) => error!("Could not parse node as 'left': {:?}", e)
+				},
+				
+				_ => warn!("Unrecognized message: <{}>", node.name())
 			}
 		}
 	}

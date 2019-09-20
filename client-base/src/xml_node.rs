@@ -74,6 +74,11 @@ impl XmlNode {
 		Ok(())
 	}
 	
+	/// Fetches the node's tag name.
+	pub fn name(&self) -> &str {
+		self.name.as_str()
+	}
+	
 	/// Fetches the node's textual contents.
 	pub fn data(&self) -> &str {
 		self.data.as_str()
