@@ -2,7 +2,9 @@
 
 use std::collections::{HashMap, HashSet, VecDeque, hash_set::Intersection, hash_map::RandomState};
 use std::str::FromStr;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
+use std::marker::PhantomData;
+use std::iter;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::hashmap;
 use socha_client_base::error::SCError;
@@ -66,7 +68,7 @@ pub struct Board {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
 	piece_stack: Vec<Piece>,
-	pub is_obstructed: bool
+	is_obstructed: bool
 }
 
 /// A transition between two game states.
@@ -91,6 +93,32 @@ pub enum PieceType {
 	Beetle,
 	Grasshopper,
 	Spider
+}
+
+/// An iterator that returns coordinates on
+/// a straight line.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct LineIter {
+	current: CubeCoords,
+	destination: CubeCoords,
+	step: CubeCoords
+}
+
+// Traits
+
+pub trait LineFormable {
+	/// Tests whether `self` and `rhs` form a
+	/// straight line.
+	fn forms_line_with(self, rhs: Self) -> bool;
+	
+	/// Fetches the elements _between_ `self` and `rhs`
+	/// in cube coordinates.
+	fn line_iter(self, rhs: Self) -> LineIter;
+}
+
+pub trait Adjacentable {
+	/// Tests whether `self` and `rhs` are neighbors.
+	fn is_adjacent_to(self, rhs: Self) -> bool;
 }
 
 // General implementations
@@ -124,9 +152,15 @@ impl AxialCoords {
 }
 
 impl CubeCoords {
+	/// Creates new (unvalidated) cube coordinates.
+	#[inline]
+	pub fn new(x: i32, y: i32, z: i32) -> Self {
+		Self { x: x, y: y, z: z }
+	}
+
 	/// Creates new cube coordinates if they are valid.
 	#[inline]
-	pub fn new(x: i32, y: i32, z: i32) -> Option<Self> {
+	pub fn new_valid(x: i32, y: i32, z: i32) -> Option<Self> {
 		if (x + y + z) == 0 {
 			Some(CubeCoords { x: x, y: y, z: z })
 		} else {
@@ -147,12 +181,59 @@ impl CubeCoords {
 	pub fn z(self) -> i32 { self.z }
 }
 
+impl<C> LineFormable for C where C: Into<CubeCoords> {
+	fn forms_line_with(self, rhs: Self) -> bool {
+		let lhs_cube = self.into();
+		let rhs_cube = rhs.into();
+		lhs_cube.x == rhs_cube.x || lhs_cube.y == rhs_cube.y || lhs_cube.z == rhs_cube.z
+	}
+	
+	fn line_iter(self, rhs: Self) -> LineIter {
+		let lhs_cube = self.into();
+		let rhs_cube = rhs.into();
+		let diff = rhs_cube - lhs_cube;
+		let step = CubeCoords::new(diff.x().signum(), diff.y().signum(), diff.z().signum());
+		LineIter::new(lhs_cube + step, step, rhs_cube)
+	}
+}
+
+impl LineIter {
+	pub fn new(start: CubeCoords, step: CubeCoords, destination: CubeCoords) -> Self {
+		Self { current: start, step: step, destination: destination }
+	}
+}
+
+impl Iterator for LineIter {
+	type Item = CubeCoords;
+	
+	fn next(&mut self) -> Option<CubeCoords> {
+		if self.current == self.destination {
+			None
+		} else {
+			let pos = self.current;
+			self.current += self.step;
+			Some(pos)
+		}
+	}
+}
+
+impl<C> Adjacentable for C where C: Into<AxialCoords> {
+	fn is_adjacent_to(self, rhs: Self) -> bool {
+		let lhs_axial = self.into();
+		let rhs_axial = rhs.into();
+		lhs_axial.coord_neighbors().iter().any(|&c| c == rhs_axial)
+	}
+}
+
 impl Field {
 	/// Fetches the player color "owning" the field.
 	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
 	
 	/// Tests whether the field is owned by the given owner.
 	pub fn is_owned_by(&self, color: PlayerColor) -> bool { self.owner() == Some(color) }
+	
+	/// Tests whether the field is occupied.
+	pub fn is_occupied(&self) -> bool { self.is_obstructed || self.has_pieces() }
 	
 	/// Fetches the top-most piece.
 	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
@@ -180,9 +261,9 @@ impl Board {
 		self.fields.get(&coords.into())
 	}
 	
-	/// Tests whether a given position is obstructed.
-	pub fn is_obstructed(&self, coords: impl Into<AxialCoords>) -> bool {
-		self.field(coords).map(|f| f.is_obstructed).unwrap_or(true)
+	/// Tests whether a given position is occupied.
+	pub fn is_occupied(&self, coords: impl Into<AxialCoords>) -> bool {
+		self.field(coords).map(|f| f.is_occupied()).unwrap_or(true)
 	}
 	
 	/// Fetches all fields owned by the given color.
@@ -324,7 +405,7 @@ impl GameState {
 	
 	/// Ensures that the destination is a direct neighbor of the start.
 	fn validate_adjacent(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		if self.board.neighbors(start).any(|(c, _)| c == destination) { Ok(()) } else { Err("Coords are not adjacent to each other".into()) }
+		if start.is_adjacent_to(destination) { Ok(()) } else { Err("Coords are not adjacent to each other".into()) }
 	}
 	
 	fn validate_ant_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
@@ -332,15 +413,29 @@ impl GameState {
 	}
 	
 	fn validate_bee_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!()
+		self.validate_adjacent(start, destination)?;
+		if self.board.can_move_between(start, destination) { Ok(()) } else { Err(format!("Cannot move between {:?} and {:?}", start, destination).into()) }
 	}
 	
 	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
+		self.validate_adjacent(start, destination)?;
+		if self.board.shared_neighbors(start, destination).any(|(_, f)| f.has_pieces()) || self.board.field(destination).map(|f| f.has_pieces()).unwrap_or(false) {
+			Ok(())
+		} else {
+			Err("Beetle has to move along swarm".into())
+		}
 	}
 	
 	fn validate_grasshopper_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
+		if !start.forms_line_with(destination) {
+			Err("Grasshopper can only move along straight lines".into())
+		} else if start.is_adjacent_to(destination) {
+			Err("Grasshopper must not move to a neighbor".into())
+		} else if start.line_iter(destination).map(|c| AxialCoords::from(c)).any(|c| self.board.field(c).map(|f| !f.is_occupied()).unwrap_or(false)) {
+			Err("Grasshopper cannot move over empty fields".into())
+		} else {
+			Ok(())
+		}
 	}
 	
 	fn validate_spider_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
@@ -464,6 +559,71 @@ impl<R> Mul<R> for AxialCoords where R: Into<i32> {
 	type Output = Self;
 	
 	fn mul(self, rhs: R) -> Self { Self { x: self.x * rhs.into(), y: self.y * rhs.into() } }
+}
+
+impl AddAssign for AxialCoords {
+	fn add_assign(&mut self, rhs: Self) {
+		self.x += rhs.x;
+		self.y += rhs.y;
+	}
+}
+
+impl SubAssign for AxialCoords {
+	fn sub_assign(&mut self, rhs: Self) {
+		self.x -= rhs.x;
+		self.y -= rhs.y;
+	}
+}
+
+impl<R> MulAssign<R> for AxialCoords where R: Into<i32> {
+	fn mul_assign(&mut self, rhs: R) {
+		let r = rhs.into();
+		self.x *= r;
+		self.y *= r;
+	}
+}
+
+impl Add for CubeCoords {
+	type Output = Self;
+
+	fn add(self, rhs: Self) -> Self { Self { x: self.x + rhs.x, y: self.y + rhs.y, z: self.y + rhs.z } }
+}
+
+impl Sub for CubeCoords {
+	type Output = Self;
+
+	fn sub(self, rhs: Self) -> Self { Self { x: self.x - rhs.x, y: self.y - rhs.y, z: self.z - rhs.z } }
+}
+
+impl<R> Mul<R> for CubeCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn mul(self, rhs: R) -> Self { Self { x: self.x * rhs.into(), y: self.y * rhs.into(), z: self.z * rhs.into() } }
+}
+
+impl AddAssign for CubeCoords {
+	fn add_assign(&mut self, rhs: Self) {
+		self.x += rhs.x;
+		self.y += rhs.y;
+		self.z += rhs.z;
+	}
+}
+
+impl SubAssign for CubeCoords {
+	fn sub_assign(&mut self, rhs: Self) {
+		self.x -= rhs.x;
+		self.y -= rhs.y;
+		self.z -= rhs.z;
+	}
+}
+
+impl<R> MulAssign<R> for CubeCoords where R: Into<i32> {
+	fn mul_assign(&mut self, rhs: R) {
+		let r = rhs.into();
+		self.x *= r;
+		self.y *= r;
+		self.z += r;
+	}
 }
 
 // General conversions
