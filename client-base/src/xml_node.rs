@@ -123,15 +123,21 @@ impl<'a> XmlNodeBuilder<'a> {
 		Self { name: name, data: "", attributes: HashMap::new(), childs: Vec::new() }
 	}
 	
+	/// Sets the tag name of the XML node.
+	pub fn name(mut self, name: &'a str) -> Self {
+		self.name = name;
+		self
+	}
+	
 	/// Sets the contents of the XML node.
 	pub fn data(mut self, data: &'a str) -> Self {
 		self.data = data;
 		self
 	}
 	
-	/// Uses the specified attributes.
-	pub fn attributes(mut self, attributes: impl Into<HashMap<String, String>>) -> Self {
-		self.attributes = attributes.into();
+	/// Adds the specified attributes.
+	pub fn attributes(mut self, attributes: impl IntoIterator<Item=(String, String)>) -> Self {
+		self.attributes.extend(attributes);
 		self
 	}
 	
@@ -141,9 +147,9 @@ impl<'a> XmlNodeBuilder<'a> {
 		self
 	}
 	
-	/// Uses the specified children.
-	pub fn childs(mut self, childs: impl Into<Vec<XmlNode>>) -> Self {
-		self.childs = childs.into();
+	/// Adds the specified children.
+	pub fn childs(mut self, childs: impl IntoIterator<Item=XmlNode>) -> Self {
+		self.childs.extend(childs);
 		self
 	}
 	
@@ -167,6 +173,12 @@ impl<'a> XmlNodeBuilder<'a> {
 			attributes: self.attributes,
 			childs: self.childs
 		}
+	}
+}
+
+impl<'a> Default for XmlNodeBuilder<'a> {
+	fn default() -> Self {
+		Self::new("")
 	}
 }
 

@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
-use socha_client_base::xml_node::{FromXmlNode, XmlNode};
+use socha_client_base::xml_node::{FromXmlNode, XmlNode, XmlNodeBuilder};
 use crate::util::{AxialCoords, CubeCoords, LineFormable, Adjacentable};
 
 // Structures
@@ -50,17 +50,32 @@ pub struct Board {
 }
 
 /// A field on the game board.
+/// 
+/// Note that the field structure intentionally does _not_
+/// store a position. If this is desired, you should use
+/// `PositionedField` or a tuple, depending on whether you
+/// want to express ownership over the field.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
 	piece_stack: Vec<Piece>,
 	is_obstructed: bool
 }
 
+/// An owned field and a position.
+/// 
+/// If ownership over the field is not desired, you should
+/// use a tuple instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PositionedField<C=AxialCoords> {
+	pub field: Field,
+	pub coords: C
+}
+
 /// A transition between two game states.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Move<C=AxialCoords> {
-	SetMove { piece: Piece, destination: C },
-	DragMove { start: C, destination: C }
+	SetMove { piece: Piece, destination: PositionedField<C> },
+	DragMove { start: PositionedField<C>, destination: PositionedField<C> }
 }
 
 /// A game piece.
@@ -443,10 +458,10 @@ impl GameState {
 	}
 	
 	//// Tests whether the given move is valid.
-	pub fn validate_move(&self, color: PlayerColor, game_move: Move) -> SCResult<()> {
+	pub fn validate_move(&self, color: PlayerColor, game_move: &Move) -> SCResult<()> {
 		match game_move {
-			Move::SetMove { piece, destination } => self.validate_set_move(color, piece, destination),
-			Move::DragMove { start, destination } => self.validate_drag_move(color, start, destination)
+			Move::SetMove { piece, destination } => self.validate_set_move(color, *piece, destination.coords),
+			Move::DragMove { start, destination } => self.validate_drag_move(color, start.coords, destination.coords)
 		}
 	}
 	
@@ -454,7 +469,7 @@ impl GameState {
 	fn possible_set_moves(&self, color: PlayerColor) -> Vec<Move> {
 		let undeployed = self.undeployed_pieces(color);
 		let opponent = color.opponent();
-		let destinations: Vec<_> = if undeployed.len() == INITIAL_PIECE_TYPES.len() {
+		let destination_coords: Vec<_> = if undeployed.len() == INITIAL_PIECE_TYPES.len() {
 			// No pieces placed yet
 			if self.undeployed_pieces(opponent).len() == INITIAL_PIECE_TYPES.len() {
 				// First turn
@@ -466,21 +481,26 @@ impl GameState {
 		} else {
 			self.board.set_move_destinations(color).collect()
 		};
+		let destinations = destination_coords.into_iter()
+			.filter_map(|c| self.board.field(c).map(|f| PositionedField { coords: c, field: f.clone() }));
 		
 		if !self.board.has_placed_bee(color) && self.turn > 5 {
-			destinations.iter()
-				.map(|&c| Move::SetMove { piece: Piece { piece_type: PieceType::Bee, owner: color }, destination: c })
+			destinations
+				.map(|d| Move::SetMove {
+					piece: Piece { piece_type: PieceType::Bee, owner: color },
+					destination: d
+				})
 				.collect()
 		} else {
-			destinations.iter()
-				.flat_map(|&c| undeployed.iter().map(move |&p| Move::SetMove { piece: p, destination: c }))
+			destinations
+				.flat_map(|d| undeployed.iter().map(move |&p| Move::SetMove { piece: p, destination: d.clone() }))
 				.collect()
 		}
 	}
 	
 	/// Returns the validated move.
 	fn validated(&self, color: PlayerColor, game_move: Move) -> SCResult<Move> {
-		self.validate_move(color, game_move).map(|_| game_move)
+		self.validate_move(color, &game_move).map(|_| game_move)
 	}
 	
 	/// Fetches a list of possible `DragMove`s.
@@ -493,7 +513,10 @@ impl GameState {
 			}
 			
 			targets.into_iter()
-				.filter_map(move |(c, _)| self.validated(color, Move::DragMove { start: start_coords, destination: c }).ok())
+				.filter_map(move |(c, f)| self.validated(color, Move::DragMove {
+					start: PositionedField { coords: start_coords, field: start_field.clone() },
+					destination: PositionedField { coords: c, field: f.clone() }
+				}).ok())
 		}).collect()
 	}
 	
@@ -629,23 +652,36 @@ impl FromXmlNode for Piece {
 impl From<Move> for XmlNode {
 	fn from(game_move: Move) -> Self {
 		match game_move {
-			Move::SetMove { piece, destination } => Self::new("data")
+			Move::SetMove { piece, destination } => XmlNode::new("data")
 				.attribute("class", "setmove")
 				.child(piece)
-				.child(Self::new("destination").attributes(CubeCoords::from(destination)))
+				.child(XmlNodeBuilder::from(destination).name("destination"))
 				.build(),
-			Move::DragMove { start, destination } => Self::new("data")
+			Move::DragMove { start, destination } => XmlNode::new("data")
 				.attribute("class", "dragmove")
-				.child(Self::new("start").attributes(CubeCoords::from(start)))
-				.child(Self::new("destination").attributes(CubeCoords::from(destination)))
+				.child(XmlNodeBuilder::from(start).name("start"))
+				.child(XmlNodeBuilder::from(destination).name("destination"))
 				.build()
 		}
 	}
 }
 
+impl<'a, C> From<PositionedField<C>> for XmlNodeBuilder<'a> where C: Into<CubeCoords> {
+	fn from(field: PositionedField<C>) -> Self {
+		let cube_coords = field.coords.into();
+		XmlNodeBuilder::default()
+			.attribute("class", "field")
+			.attribute("x", cube_coords.x().to_string())
+			.attribute("y", cube_coords.y().to_string())
+			.attribute("z", cube_coords.z().to_string())
+			.attribute("isObstructed", field.field.is_obstructed.to_string())
+			.childs(field.field.piece_stack().iter().map(|&p| XmlNode::from(p)))
+	}
+}
+
 impl From<Piece> for XmlNode {
 	fn from(piece: Piece) -> Self {
-		Self::new("piece")
+		XmlNode::new("piece")
 			.attribute("owner", piece.owner)
 			.attribute("type", piece.piece_type)
 			.build()
