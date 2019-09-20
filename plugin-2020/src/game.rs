@@ -186,6 +186,18 @@ impl Board {
 		self.fields().flat_map(|(_, f)| f.piece_stack()).any(|p| p.owner == color)
 	}
 	
+	/// Tests whether the field at the given coordinates is next to
+	/// a given color.
+	pub fn is_next_to(&self, color: PlayerColor, coords: impl Into<AxialCoords>) -> bool {
+		self.neighbors(coords).any(|(_, f)| f.is_owned_by(color))
+	}
+	
+	/// Tests whether the field at the given coordinates is adjacent
+	/// to a field.
+	pub fn is_next_to_piece(&self, coords: impl Into<AxialCoords>) -> bool {
+		self.neighbors(coords).any(|(_, f)| f.has_pieces())
+	}
+	
 	/// Performs a depth-first search on the board's non-empty fields
 	/// starting at the given coordinates and removing visited
 	/// locations from the set.
@@ -200,30 +212,35 @@ impl Board {
 		}
 	}
 	
-	
-	/// Performs a depth-first search on the board
-	/// starting at the given coordinates and removing
-	/// visited locations from the set. If there are
-	/// any reachable nodes which satisfy
-	fn dfs_any(&self, coords: AxialCoords, unvisited: &mut HashSet<AxialCoords>, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
+	/// Performs a depth-first search over the connected
+	/// fields satisfying the `field_condition` on the board
+	/// starting at the given coordinates and adding
+	/// visited locations to the set.
+	/// 
+	/// Returns whether any field satisfying the `search_condition`
+	/// was found.
+	fn dfs_any(&self, coords: AxialCoords, visited: &mut HashSet<AxialCoords>, field_condition: impl Fn(AxialCoords, &Field) -> bool, search_condition: impl Fn(AxialCoords, &Field) -> bool) -> bool {
 		if let Some(field) = self.field(coords) {
-			unvisited.remove(&coords);
-			if search_condition(coords, field) {
-				true
-			} else {
-				self.neighbors(coords)
-					.filter(|(c, _)| unvisited.contains(c))
-					.any(|(c, _)| self.dfs_any(c, unvisited, search_condition))
-			}
+			if field_condition(coords, field) {
+				visited.insert(coords);
+				if search_condition(coords, field) {
+					true
+				} else {
+					self.neighbors(coords)
+						.filter(|(c, _)| !visited.contains(c))
+						.any(|(c, _)| self.dfs_any(c, visited, field_condition, search_condition))
+				}
+			} else { false }
 		} else { false }
 	}
 	
-	/// Tests whether two coordinates are connected by empty fields on the board.
-	pub fn connected_by_empty(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
+	/// Tests whether two coordinates are connected by a path
+	/// along the swarm's boundary.
+	pub fn connected_by_boundary_path(&self, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> bool {
 		let start = start_coords.into();
 		let destination = destination_coords.into();
-		let mut unvisited = self.fields().filter_map(|(&c, f)| if !f.is_obstructed { Some(c) } else { None }).collect::<HashSet<_>>();
-		self.dfs_any(start, &mut unvisited, |c, f| c == destination && c != start)
+		let mut visited = HashSet::new();
+		self.dfs_any(start, &mut visited, |c, f| !f.is_obstructed && self.is_next_to_piece(c), |c, f| c == destination && c != start)
 	}
 	
 	/// Performs a depth-first search on the board at the given
@@ -298,10 +315,7 @@ impl GameState {
 		} else if !self.board.fields().any(|(_, f)| f.has_pieces()) {
 			Ok(())
 		} else if self.board.fields_owned_by(color).count() == 0 {
-			let placed_next_to_opponent = self.board.fields_owned_by(color.opponent())
-				.flat_map(|(&c, _)| self.board.neighbors(c))
-				.any(|(c, _)| destination == c);
-			if placed_next_to_opponent {
+			if self.board.is_next_to(color.opponent(), destination) {
 				Ok(())
 			} else {
 				Err("Piece has to be placed next to an opponent's piece".into())
@@ -320,8 +334,7 @@ impl GameState {
 	}
 	
 	fn validate_ant_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		// FIXME: Test for actual path along swarm instead of "just" searching for an empty path
-		if self.board.connected_by_empty(start, destination) { Ok(()) } else { Err("Could not find path for ant".into()) }
+		if self.board.connected_by_boundary_path(start, destination) { Ok(()) } else { Err("Could not find path for ant".into()) }
 	}
 	
 	fn validate_bee_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
