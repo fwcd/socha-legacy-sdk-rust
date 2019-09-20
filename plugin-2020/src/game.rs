@@ -147,6 +147,30 @@ impl CubeCoords {
 	pub fn z(self) -> i32 { self.z }
 }
 
+impl Field {
+	/// Fetches the player color "owning" the field.
+	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
+	
+	/// Tests whether the field is owned by the given owner.
+	pub fn is_owned_by(&self, color: PlayerColor) -> bool { self.owner() == Some(color) }
+	
+	/// Fetches the top-most piece.
+	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
+	
+	/// Tests whether the field contains pieces.
+	pub fn has_pieces(&self) -> bool { !self.piece_stack.is_empty() }
+	
+	/// Fetches the piece stack.
+	pub fn piece_stack(&self) -> &Vec<Piece> { &self.piece_stack }
+	
+	/// Pushes a piece onto the piece stack.
+	pub fn push(&mut self, piece: Piece) { self.piece_stack.push(piece) }
+	
+	/// Pops a piece from the piece stack or
+	/// returns `None` if the stack is empty.
+	pub fn pop(&mut self) -> Option<Piece> { self.piece_stack.pop() }
+}
+
 impl Board {
 	/// Fetches a reference to the field at the given
 	/// coordinates. The coordinates can be of and type
@@ -276,30 +300,6 @@ impl Board {
 	}
 }
 
-impl Field {
-	/// Fetches the player color "owning" the field.
-	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
-	
-	/// Tests whether the field is owned by the given owner.
-	pub fn is_owned_by(&self, color: PlayerColor) -> bool { self.owner() == Some(color) }
-	
-	/// Fetches the top-most piece.
-	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
-	
-	/// Tests whether the field contains pieces.
-	pub fn has_pieces(&self) -> bool { !self.piece_stack.is_empty() }
-	
-	/// Fetches the piece stack.
-	pub fn piece_stack(&self) -> &Vec<Piece> { &self.piece_stack }
-	
-	/// Pushes a piece onto the piece stack.
-	pub fn push(&mut self, piece: Piece) { self.piece_stack.push(piece) }
-	
-	/// Pops a piece from the piece stack or
-	/// returns `None` if the stack is empty.
-	pub fn pop(&mut self) -> Option<Piece> { self.piece_stack.pop() }
-}
-
 impl GameState {
 	/// Fetches the undeployed pieces for a specific color.
 	pub fn undeployed_pieces(&self, color: PlayerColor) -> &Vec<Piece> {
@@ -316,10 +316,36 @@ impl GameState {
 			PlayerColor::Blue => &self.blue_player
 		}
 	} 
+
 	/// Fetches the current _round_ (which is half the turn).
-	 pub fn round(&self) -> u32 { self.turn / 2 }
+	pub fn round(&self) -> u32 { self.turn / 2 }
 
 	// Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
+	
+	/// Ensures that the destination is a direct neighbor of the start.
+	fn validate_adjacent(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		if self.board.neighbors(start).any(|(c, _)| c == destination) { Ok(()) } else { Err("Coords are not adjacent to each other".into()) }
+	}
+	
+	fn validate_ant_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		if self.board.connected_by_boundary_path(start, destination) { Ok(()) } else { Err("Could not find path for ant".into()) }
+	}
+	
+	fn validate_bee_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!()
+	}
+	
+	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
+	fn validate_grasshopper_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
+	
+	fn validate_spider_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
+		unimplemented!() // TODO
+	}
 
 	fn validate_set_move(&self, color: PlayerColor, piece: Piece, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
 		let destination = destination_coords.into();
@@ -347,27 +373,7 @@ impl GameState {
 			Ok(())
 		}
 	}
-	
-	fn validate_ant_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		if self.board.connected_by_boundary_path(start, destination) { Ok(()) } else { Err("Could not find path for ant".into()) }
-	}
-	
-	fn validate_bee_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
-	}
-	
-	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
-	}
-	
-	fn validate_grasshopper_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
-	}
-	
-	fn validate_spider_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
-		unimplemented!() // TODO
-	}
-	
+
 	fn validate_drag_move(&self, color: PlayerColor, start_coords: impl Into<AxialCoords>, destination_coords: impl Into<AxialCoords>) -> SCResult<()> {
 		let start = start_coords.into();
 		let destination = destination_coords.into();
