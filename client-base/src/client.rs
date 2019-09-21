@@ -32,17 +32,25 @@ pub trait SCClientDelegate {
 	fn request_move(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, my_color: <Self::Plugin as SCPlugin>::PlayerColor) -> <Self::Plugin as SCPlugin>::Move;
 }
 
+/// A configuration that determines whether
+/// the reader and/or the writer of a stream
+/// should be swapped by stdio to ease debugging.
+pub struct DebugMode {
+	debug_reader: bool,
+	debug_writer: bool
+}
+
 /// The client which handles XML requests, manages
 /// the game state and invokes the delegate.
 pub struct SCClient<D> where D: SCClientDelegate {
 	delegate: D,
-	debug_mode: bool,
+	debug_mode: DebugMode,
 	game_state: Option<<D::Plugin as SCPlugin>::GameState>
 }
 
 impl<D> SCClient<D> where D: SCClientDelegate {
 	/// Creates a new client using the specified delegate.
-	pub fn new(delegate: D, debug_mode: bool) -> Self {
+	pub fn new(delegate: D, debug_mode: DebugMode) -> Self {
 		Self { delegate: delegate, debug_mode: debug_mode, game_state: None }
 	}
 	
@@ -50,7 +58,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 	/// from the provided address via TCP.
 	pub fn run(self, host: &str, port: u16, reservation: Option<&str>) -> SCResult<()> {
 		let address = format!("{}:{}", host, port);
-		let mut stream = TcpStream::connect(&address)?;
+		let stream = TcpStream::connect(&address)?;
 		info!("Connected to {}", address);
 		
 		{
@@ -65,11 +73,19 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 			writer.write(join_xml.as_bytes())?;
 		}
 		
-		if self.debug_mode {
-			// In debug mode, only the raw XML messages will be output
-			io::copy(&mut stream, &mut io::stdout())?;
+		// Begin parsing game messages from the stream.
+		// List all combinations of modes explicitly,
+		// since they generate different generic instantiations
+		// of `run_game`.
+
+		let mode = &self.debug_mode;
+		if mode.debug_reader && !mode.debug_writer {
+			self.run_game(io::stdin(), BufWriter::new(stream))?;
+		} else if !mode.debug_reader && mode.debug_writer {
+			self.run_game(BufReader::new(stream), io::stdout())?;
+		} else if mode.debug_reader && mode.debug_writer {
+			self.run_game(io::stdin(), io::stdout())?;
 		} else {
-			// In normal mode, begin parsing game messages from the stream
 			let reader = BufReader::new(stream.try_clone()?);
 			let writer = BufWriter::new(stream);
 			self.run_game(reader, writer)?;
