@@ -7,6 +7,7 @@ use log::{trace, debug};
 use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryFrom;
+use std::cmp::{max, min};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
@@ -156,8 +157,27 @@ impl Field {
 	
 impl Board {
 	/// Creates a new board with the given fields.
-	pub fn new(fields: impl IntoIterator<Item=(AxialCoords, Field)>) -> Self {
-		Self { fields: fields.into_iter().collect() }
+	pub fn new(fields: impl Into<HashMap<AxialCoords, Field>>) -> Self {
+		Self { fields: fields.into() }
+	}
+	
+	/// Creates a new hexagonal board. In addition to the provided
+	/// fields, the board is padded with empty fields up to the
+	/// given radius.
+	pub fn filling_radius(radius: i32, fields: impl Into<HashMap<AxialCoords, Field>>) -> Self {
+		let mut fields: HashMap<_, _> = fields.into();
+		let inner = radius - 1;
+		let all_coords = ((-inner)..radius)
+			.flat_map(|y| (max(y - inner, -inner)..min(y + inner, inner))
+				.map(move |x| AxialCoords::new(x, y)));
+		
+		for coords in all_coords {
+			if !fields.contains_key(&coords) {
+				fields.insert(coords, Field::default());
+			}
+		}
+	
+		Self { fields: fields }
 	}
 
 	/// Parses a board from a plain text
@@ -197,7 +217,9 @@ impl Board {
 	/// 
 	/// The fields will be returned in the format
 	/// of axial coordinates with the origin being
-	/// located in the center of the board.
+	/// located in the center of the board. The x-axis
+	/// points to the right and the y-axis diagonally
+	/// to the top-left.
 	pub fn from_ascii_hex_grid(grid: impl Into<String>) -> SCResult<Self> {
 		let double_positioned: Vec<_> = grid.into().lines()
 			.map(|l| l.trim())
@@ -778,8 +800,7 @@ impl FromXmlNode for Player {
 
 impl FromXmlNode for Board {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
-		Ok(Self {
-			fields: node.child_by_name("fields")?
+		Ok(Self::filling_radius(6, node.child_by_name("fields")?
 				.childs_by_name("field")
 				.map(|f| Ok((
 					CubeCoords::new(
@@ -790,7 +811,7 @@ impl FromXmlNode for Board {
 					Field::from_node(f)?
 				)))
 				.collect::<SCResult<HashMap<AxialCoords, Field>>>()?
-		})
+		))
 	}
 }
 
