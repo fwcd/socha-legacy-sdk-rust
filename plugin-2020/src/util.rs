@@ -300,11 +300,19 @@ impl From<AxialCoords> for CubeCoords {
 	fn from(coords: AxialCoords) -> Self { Self { x: coords.x, y: coords.y, z: -(coords.x + coords.y) } }
 }
 
+impl From<AxialCoords> for DoubledCoords {
+	fn from(coords: AxialCoords) -> Self {
+		let shift = coords.y.abs() % 2;
+		let offset = coords.y / 2 + shift;
+		Self { x: 2 * (coords.x - offset) + shift, y: -coords.y }
+	}
+}
+
 impl From<DoubledCoords> for AxialCoords {
 	fn from(coords: DoubledCoords) -> Self {
-		let shift = coords.x % 2;
+		let shift = coords.y.abs() % 2;
 		let offset = -coords.y / 2 + shift;
-		Self { x: 2 * (coords.x - offset) + shift, y: -coords.y }
+		Self { x: ((coords.x - shift) / 2) + offset, y: -coords.y }
 	}
 }
 
