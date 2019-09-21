@@ -319,7 +319,7 @@ impl Board {
 			.flat_map(move |(c, _)| self.empty_neighbors(c))
 			.unique()
 			.filter_map(move |(c, _)| if self.is_next_to(opponent, c) { None } else {
-				trace!("SetMove destination {} does not touch an opponent's piece", c);
+				trace!("SetMove destination {} does not touch an opponent's ({:?}'s) piece", c, opponent);
 				Some(c)
 			})
 	}
@@ -628,7 +628,7 @@ impl GameState {
 	
 	/// Fetches a list of possible moves for a given color.
 	pub fn possible_moves(&self, color: PlayerColor) -> Vec<Move> {
-		trace!("Finding possible moves");
+		trace!("Finding possible moves for color {:?}", color);
 		let mut moves = self.possible_set_moves(color);
 		moves.extend(self.possible_drag_moves(color));
 		moves
