@@ -134,6 +134,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 								})?;
 								debug!("Sending move {:#?}", move_node);
 								move_node.write_to(&mut xml_writer)?;
+								xml_writer.inner_mut().flush()?;
 							} else {
 								error!("Cannot fulfill move request without a game state!");
 							}
