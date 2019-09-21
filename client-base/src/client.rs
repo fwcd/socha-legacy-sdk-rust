@@ -36,8 +36,8 @@ pub trait SCClientDelegate {
 /// the reader and/or the writer of a stream
 /// should be swapped by stdio to ease debugging.
 pub struct DebugMode {
-	debug_reader: bool,
-	debug_writer: bool
+	pub debug_reader: bool,
+	pub debug_writer: bool
 }
 
 /// The client which handles XML requests, manages
