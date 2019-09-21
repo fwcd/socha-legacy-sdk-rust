@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use log::{trace, debug};
 use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::convert::{TryInto, TryFrom};
+use std::convert::TryFrom;
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
@@ -121,6 +121,11 @@ pub const INITIAL_PIECE_TYPES: [PieceType; 11] = [
 // General implementations
 
 impl Field {
+	/// Creates a new field.
+	pub fn new(piece_stack: impl IntoIterator<Item=Piece>, is_obstructed: bool) -> Self {
+		Self { piece_stack: piece_stack.into_iter().collect(), is_obstructed: is_obstructed }
+	}
+
 	/// Fetches the player color "owning" the field.
 	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
 	
@@ -150,6 +155,11 @@ impl Field {
 // Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
 	
 impl Board {
+	/// Creates a new board with the given fields.
+	pub fn new(fields: impl IntoIterator<Item=(AxialCoords, Field)>) -> Self {
+		Self { fields: fields.into_iter().collect() }
+	}
+
 	/// Parses a board from a plain text
 	/// hex grid of the following format:
 	///
@@ -169,7 +179,8 @@ impl Board {
 	/// 
 	/// The rows should be "indented" alternatingly
 	/// with the first row indented as depicted
-	/// by the example above.
+	/// by the example above and the board should
+	/// have a perfectly centered field.
 	/// 
 	/// Each hex field may or may not contain
 	/// a `Field` described by a two-character
@@ -202,22 +213,22 @@ impl Board {
 				.map(|(x, frag)| (i32::try_from(x).unwrap(), frag))
 				.map(move |(x, frag)| (
 					DoubledCoords::new((2 * x) + ((y + 1) % 2), y),
-					Field::from_str(frag).unwrap_or_default()
+					Field::from_str(frag.trim()).unwrap_or_else(|e| {
+						debug!("Could not parse {}: {:?}", frag, e);
+						Field::default()
+					})
 				)))
 			.collect();
 		let center = DoubledCoords::new(
 			double_positioned.iter().map(|(c, _)| c.x()).max().unwrap_or(0),
 			double_positioned.iter().map(|(c, _)| c.y()).max().unwrap_or(0)
 		) / 2;
-		println!("Determined center at {:?}", center);
-		println!("Parsed fields at {:?}", double_positioned.iter().map(|(c, _)| *c - center).collect::<Vec<_>>());
+		debug!("Determined center at {:?}", center);
+		debug!("Parsed fields at {:?}", double_positioned.iter().map(|(c, _)| *c - center).collect::<Vec<_>>());
 		let fields: HashMap<_, _> = double_positioned.into_iter()
-			.map(|(c, f)| {
-				println!("{:?} -> {:?}", c - center, AxialCoords::from(c - center)); // DEBUG
-				(AxialCoords::from(c - center), f)
-			})
+			.map(|(c, f)| (AxialCoords::from(c - center), f))
 			.collect();
-		println!("Fields: {:?}", fields);
+		debug!("Fields: {:?}", fields);
 		Ok(Board { fields: fields })
 	}
 
@@ -716,6 +727,13 @@ lazy_static! {
 impl FromStr for Field {
 	type Err = SCError;
 	
+	/// Converts a field in a two-character notation
+	/// to a field. The first character denotes the
+	/// piece type and the second character describes
+	/// the player color.
+	/// 
+	/// Obstructed fields and piece stacks are not (yet)
+	/// supported.
 	fn from_str(raw: &str) -> SCResult<Self> {
 		if raw.is_empty() {
 			Ok(Self::default())
@@ -724,7 +742,6 @@ impl FromStr for Field {
 			let owner = PlayerColor::try_from(groups[2].chars().next().unwrap())?;
 			let piece_type = PieceType::try_from(groups[1].chars().next().unwrap())?;
 			let piece = Piece { piece_type: piece_type, owner: owner };
-			// Obstructed fields and piece stacks are not (yet) supported
 			Ok(Self { piece_stack: vec![piece], is_obstructed: false })
 		}
 	}
