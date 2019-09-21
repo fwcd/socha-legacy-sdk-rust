@@ -7,6 +7,7 @@ use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode, XmlNodeBuilder};
+use log::trace;
 use crate::util::{AxialCoords, CubeCoords, LineFormable, Adjacentable};
 
 // Structures
@@ -467,24 +468,32 @@ impl GameState {
 	
 	/// Fetches a list of possible `SetMove`s.
 	fn possible_set_moves(&self, color: PlayerColor) -> Vec<Move> {
+		trace!("Finding possible SetMoves");
+
 		let undeployed = self.undeployed_pieces(color);
 		let opponent = color.opponent();
 		let destination_coords: Vec<_> = if undeployed.len() == INITIAL_PIECE_TYPES.len() {
 			// No pieces placed yet
 			if self.undeployed_pieces(opponent).len() == INITIAL_PIECE_TYPES.len() {
 				// First turn
+				trace!("Finding SetMoves during first turn...");
 				self.board.empty_fields().map(|(c, _)| c).collect()
 			} else {
 				// Second turn
+				trace!("Finding SetMoves during second turn...");
 				self.board.fields_owned_by(opponent).flat_map(|(c, _)| self.board.empty_neighbors(c)).map(|(c, _)| c).collect()
 			}
 		} else {
+			trace!("Querying SetMove destinations...");
 			self.board.set_move_destinations(color).collect()
 		};
+
 		let destinations = destination_coords.into_iter()
 			.filter_map(|c| self.board.field(c).map(|f| PositionedField { coords: c, field: f.clone() }));
+		trace!("Found SetMove destinations at {:#?}", destinations);
 		
 		if !self.board.has_placed_bee(color) && self.turn > 5 {
+			trace!("Player has not placed bee yet, therefore placing it is the only valid move.");
 			destinations
 				.map(|d| Move::SetMove {
 					piece: Piece { piece_type: PieceType::Bee, owner: color },
@@ -492,6 +501,7 @@ impl GameState {
 				})
 				.collect()
 		} else {
+			trace!("Creating set moves from {:?} x {:?}", destinations, undeployed);
 			destinations
 				.flat_map(|d| undeployed.iter().map(move |&p| Move::SetMove { piece: p, destination: d.clone() }))
 				.collect()
@@ -505,6 +515,8 @@ impl GameState {
 	
 	/// Fetches a list of possible `DragMove`s.
 	fn possible_drag_moves(&self, color: PlayerColor) -> Vec<Move> {
+		trace!("Finding possible DragMoves");
+
 		self.board.fields_owned_by(color).flat_map(|(start_coords, start_field)| {
 			let mut targets: Vec<_> = self.board.swarm_boundary().collect();
 
@@ -512,6 +524,7 @@ impl GameState {
 				targets.extend(self.board.neighbors(start_coords));
 			}
 			
+			trace!("Drag targets from {}: {:#?}", start_coords, targets);
 			targets.into_iter()
 				.filter_map(move |(c, f)| self.validated(color, Move::DragMove {
 					start: PositionedField { coords: start_coords, field: start_field.clone() },
@@ -522,6 +535,7 @@ impl GameState {
 	
 	/// Fetches a list of possible moves for a given color.
 	pub fn possible_moves(&self, color: PlayerColor) -> Vec<Move> {
+		trace!("Finding possible moves");
 		let mut moves = self.possible_set_moves(color);
 		moves.extend(self.possible_drag_moves(color));
 		moves

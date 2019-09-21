@@ -1,6 +1,7 @@
 use arrayvec::ArrayVec;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
 use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use socha_client_base::hashmap;
 
 /// Axial coordinates on the hex grid.
@@ -99,6 +100,18 @@ impl CubeCoords {
 	/// Fetches the z-coordinate
 	#[inline]
 	pub fn z(self) -> i32 { self.z }
+}
+
+impl Display for AxialCoords {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "({}, {})", self.x, self.y)
+	}
+}
+
+impl Display for CubeCoords {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "({}, {}, {})", self.x, self.y, self.z)
+	}
 }
 
 impl<C> LineFormable for C where C: Into<CubeCoords> {
