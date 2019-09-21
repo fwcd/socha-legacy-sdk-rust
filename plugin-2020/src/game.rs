@@ -319,7 +319,7 @@ impl Board {
 			.flat_map(move |(c, _)| self.empty_neighbors(c))
 			.unique()
 			.filter_map(move |(c, _)| if self.is_next_to(opponent, c) { None } else {
-				trace!("SetMove destination {} does not touch an opponent's ({:?}'s) piece", c, opponent);
+				trace!("SetMove destination {} does not touch an opponent's ({:?}'s) piece, neighbors: {:#?}", c, opponent, self.neighbors(c).collect::<Vec<_>>());
 				Some(c)
 			})
 	}
