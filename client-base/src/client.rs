@@ -150,10 +150,6 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 						Data::Error { message } => {
 							warn!("Got error from server: {}", message);
 						},
-						Data::CloseConnection => {
-							info!("Closing connection as requested by server...");
-							break
-						},
 						_ => warn!("Could not handle room data: {:?}", room.data)
 					},
 					Err(e) => error!("Could not parse node as room: {:?}", e)
@@ -169,6 +165,11 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 				"left" => match Left::from_node(&node) {
 					Ok(left) => info!("Left room {}", left.room_id),
 					Err(e) => error!("Could not parse node as 'left': {:?}", e)
+				},
+				
+				"close" | "sc.protocol.responses.CloseConnection" => {
+					info!("Closing connection as requested by server...");
+					break;
 				},
 				
 				_ => warn!("Unrecognized message: <{}>", node.name())

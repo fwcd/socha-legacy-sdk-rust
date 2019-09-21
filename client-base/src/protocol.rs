@@ -41,8 +41,7 @@ pub enum Data<P> where P: SCPlugin {
 	Move(P::Move),
 	MoveRequest,
 	GameResult(GameResult<P>),
-	Error { message: String },
-	CloseConnection
+	Error { message: String }
 }
 
 /// The final result of a game.
@@ -150,7 +149,6 @@ impl<P> FromXmlNode for Data<P> where P: SCPlugin {
 			"sc.framework.plugins.protocol.MoveRequest" => Ok(Self::MoveRequest),
 			"result" => Ok(Self::GameResult(GameResult::from_node(node)?)),
 			"error" => Ok(Self::Error { message: node.attribute("message")?.to_owned() }),
-			"close" | "sc.protocol.responses.CloseConnection" => Ok(Self::CloseConnection),
 			_ => Err(format!("Unrecognized data class: {}", class).into())
 		}
 	}
