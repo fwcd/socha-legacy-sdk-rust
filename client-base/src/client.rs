@@ -147,6 +147,13 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 							info!("Got game result: {:?}", result);
 							self.delegate.on_game_end(result);
 						},
+						Data::Error { message } => {
+							warn!("Got error from server: {}", message);
+						},
+						Data::CloseConnection => {
+							info!("Closing connection as requested by server...");
+							break
+						},
 						_ => warn!("Could not handle room data: {:?}", room.data)
 					},
 					Err(e) => error!("Could not parse node as room: {:?}", e)
@@ -167,5 +174,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 				_ => warn!("Unrecognized message: <{}>", node.name())
 			}
 		}
+		
+		Ok(())
 	}
 }

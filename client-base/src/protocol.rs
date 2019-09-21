@@ -40,8 +40,9 @@ pub enum Data<P> where P: SCPlugin {
 	Memento { state: P::GameState },
 	Move(P::Move),
 	MoveRequest,
+	GameResult(GameResult<P>),
 	Error { message: String },
-	GameResult(GameResult<P>)
+	CloseConnection
 }
 
 /// The final result of a game.
@@ -147,8 +148,9 @@ impl<P> FromXmlNode for Data<P> where P: SCPlugin {
 			"welcomeMessage" => Ok(Self::WelcomeMessage { color: node.attribute("color")?.parse()? }),
 			"memento" => Ok(Self::Memento { state: P::GameState::from_node(node.child_by_name("state")?)? }),
 			"sc.framework.plugins.protocol.MoveRequest" => Ok(Self::MoveRequest),
-			"error" => Ok(Self::Error { message: node.attribute("message")?.to_owned() }),
 			"result" => Ok(Self::GameResult(GameResult::from_node(node)?)),
+			"error" => Ok(Self::Error { message: node.attribute("message")?.to_owned() }),
+			"close" | "sc.protocol.responses.CloseConnection" => Ok(Self::CloseConnection),
 			_ => Err(format!("Unrecognized data class: {}", class).into())
 		}
 	}
