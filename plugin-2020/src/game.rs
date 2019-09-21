@@ -164,11 +164,12 @@ impl Board {
 	/// Creates a new hexagonal board. In addition to the provided
 	/// fields, the board is padded with empty fields up to the
 	/// given radius.
-	pub fn filling_radius(radius: i32, fields: impl Into<HashMap<AxialCoords, Field>>) -> Self {
+	pub fn filling_radius(radius: usize, fields: impl Into<HashMap<AxialCoords, Field>>) -> Self {
 		let mut fields: HashMap<_, _> = fields.into();
-		let inner = radius - 1;
-		let all_coords = ((-inner)..radius)
-			.flat_map(|y| (max(y - inner, -inner)..min(y + inner, inner))
+		let outer = i32::try_from(radius).expect("Radius is too large to fit in a 32-bit (signed) int");
+		let inner = outer - 1;
+		let all_coords = ((-inner)..outer)
+			.flat_map(|y| (max(y - inner, -inner)..(min(y + inner, inner) + 1))
 				.map(move |x| AxialCoords::new(x, y)));
 		
 		for coords in all_coords {

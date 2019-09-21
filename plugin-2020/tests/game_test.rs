@@ -1,5 +1,6 @@
 use std::iter::once;
-use socha_plugin_2020::game::{Board, PlayerColor, Field, Piece, PieceType};
+use std::collections::HashMap;
+use socha_plugin_2020::game::{Board, PlayerColor, Field, Piece, PieceType, BOARD_RADIUS, FIELD_COUNT};
 use socha_plugin_2020::util::AxialCoords;
 
 macro_rules! assert_unordered_eq {
@@ -71,4 +72,10 @@ pub fn test_filled_ascii_hex_grid() {
 			owner: PlayerColor::Blue
 		}), false))
 	]);
+}
+
+#[test]
+fn test_filling_radius() {
+	let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
+	assert_eq!(board.fields().count(), FIELD_COUNT);
 }
