@@ -5,6 +5,9 @@ use std::fmt::{self, Display, Formatter};
 use socha_client_base::hashmap;
 
 /// Axial coordinates on the hex grid.
+/// 
+/// See https://www.redblobgames.com/grids/hexagons/#coordinates-axial
+/// for a description.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AxialCoords {
 	x: i32,
@@ -13,11 +16,31 @@ pub struct AxialCoords {
 
 /// Cube coordinates on the hex grid.
 /// These are used by the protocol internally.
+/// 
+/// See https://www.redblobgames.com/grids/hexagons/#coordinates-cube
+/// for a description.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct CubeCoords {
 	x: i32,
 	y: i32,
 	z: i32
+}
+
+/// Offset coordinates with a doubled vertical
+/// step size on the hex grid. Note that the y-axis
+/// points _downwards_ with `DoubleCoords`, whereas
+/// it points _upwards_ when using `AxialCoords` or
+/// `CubeCoords`.
+/// 
+/// These are especially useful when dealing with
+/// ASCII hex-grids.
+/// 
+/// See https://www.redblobgames.com/grids/hexagons/#coordinates-doubled
+/// for a description.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct DoubledCoords {
+	x: i32,
+	y: i32
 }
 
 /// An iterator that returns coordinates on
@@ -102,6 +125,22 @@ impl CubeCoords {
 	pub fn z(self) -> i32 { self.z }
 }
 
+impl DoubledCoords {
+	/// Creates new doubled coordinates.
+	#[inline]
+	pub fn new(x: i32, y: i32) -> Self {
+		Self { x: x, y: y }
+	}
+
+	/// Fetches the x-coordinate
+	#[inline]
+	pub fn x(self) -> i32 { self.x }
+	
+	/// Fetches the y-coordinate
+	#[inline]
+	pub fn y(self) -> i32 { self.y }
+}
+
 impl Display for AxialCoords {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
 		write!(f, "({}, {})", self.x, self.y)
@@ -111,6 +150,12 @@ impl Display for AxialCoords {
 impl Display for CubeCoords {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
 		write!(f, "({}, {}, {})", self.x, self.y, self.z)
+	}
+}
+
+impl Display for DoubledCoords {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "({}, {})", self.x, self.y)
 	}
 }
 
@@ -253,6 +298,14 @@ impl From<CubeCoords> for AxialCoords {
 
 impl From<AxialCoords> for CubeCoords {
 	fn from(coords: AxialCoords) -> Self { Self { x: coords.x, y: coords.y, z: -(coords.x + coords.y) } }
+}
+
+impl From<DoubledCoords> for AxialCoords {
+	fn from(coords: DoubledCoords) -> Self {
+		let shift = coords.x % 2;
+		let offset = -coords.y / 2 + shift;
+		Self { x: 2 * (coords.x - offset) + shift, y: -coords.y }
+	}
 }
 
 impl From<CubeCoords> for HashMap<String, String> {

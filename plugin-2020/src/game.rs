@@ -147,6 +147,29 @@ impl Field {
 // Source: Partially translated from https://github.com/CAU-Kiel-Tech-Inf/socha/blob/8399e73673971427624a73ef42a1b023c69268ec/plugin/src/shared/sc/plugin2020/util/GameRuleLogic.kt
 	
 impl Board {
+	/// Parses a board from a plain text
+	/// hex grid of the following format:
+	/// 
+	/// ```
+	///  /\  /\  /\  /\
+	/// /  \/  \/  \/  \
+	/// |   |   |   |  |
+	/// \  /\  /\  /\  /\
+	///  \/  \/  \/  \/  \
+	///   |   |   |   |   |
+	///  /\  /\  /\  /\  /
+	/// /  \/  \/  \/  \/
+	/// |   |   |   |   |
+	/// \  /\  /\  /\  /
+	///  \/  \/  \/  \/
+	/// ```
+	/// 
+	/// Note that the format currently does
+	/// not support stacked pieces.
+	pub fn from_ascii_hex_grid(grid: String) -> Self {
+		unimplemented!()
+	}
+
 	/// Fetches a reference to the field at the given
 	/// coordinates. The coordinates can be of and type
 	/// (e.g. axial/cube) as long as they are convertible
