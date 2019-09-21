@@ -338,6 +338,11 @@ impl Board {
 	/// Fetches the possible destinations for a SetMove.
 	fn set_move_destinations<'a>(&'a self, color: PlayerColor) -> impl Iterator<Item=AxialCoords> + 'a {
 		let opponent = color.opponent();
+
+		trace!("Looking for SetMove destinations on board...");
+		trace!("Fields owned by {:?}: {:#?}", color, self.fields_owned_by(color).collect::<Vec<_>>());
+		trace!("Fields owned by {:?} (opponent): {:#?}", color, self.fields_owned_by(opponent).collect::<Vec<_>>());
+
 		self.fields_owned_by(color)
 			.flat_map(move |(c, _)| self.empty_neighbors(c))
 			.unique()
