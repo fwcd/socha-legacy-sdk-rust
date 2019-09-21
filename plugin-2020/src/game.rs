@@ -2,13 +2,16 @@
 
 use arrayvec::ArrayVec;
 use itertools::Itertools;
+use lazy_static::lazy_static;
+use log::{trace, debug};
+use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::convert::{TryInto, TryFrom};
 use std::str::FromStr;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode, XmlNodeBuilder};
-use log::trace;
-use crate::util::{AxialCoords, CubeCoords, LineFormable, Adjacentable};
+use crate::util::{AxialCoords, CubeCoords, DoubledCoords, LineFormable, Adjacentable};
 
 // Structures
 
@@ -56,7 +59,7 @@ pub struct Board {
 /// store a position. If this is desired, you should use
 /// `PositionedField` or a tuple, depending on whether you
 /// want to express ownership over the field.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Field {
 	piece_stack: Vec<Piece>,
 	is_obstructed: bool
@@ -149,23 +152,73 @@ impl Field {
 impl Board {
 	/// Parses a board from a plain text
 	/// hex grid of the following format:
+	///
+	/// ```ignore 
+	///     /\  /\      
+	///    /  \/  \     
+	///    |BR |   |    
+	///   /\  /\  /\    
+	///  /  \/  \/  \   
+	///  |   |GB |   |  
+	///  \  /\  /\  /   
+	///   \/  \/  \/    
+	///    |   |   |    
+	///    \  /\  /     
+	///     \/  \/      
+	/// ```
 	/// 
-	/// ` /\  /\  /\  /\`
-	/// `/  \/  \/  \/  \`
-	/// `|   |   |   |  |`
-	/// `\  /\  /\  /\  /\`
-	/// ` \/  \/  \/  \/  \`
-	/// `  |   |   |   |   |`
-	/// ` /\  /\  /\  /\  /`
-	/// `/  \/  \/  \/  \/`
-	/// `|   |   |   |   |`
-	/// `\  /\  /\  /\  /`
-	/// ` \/  \/  \/  \/`
+	/// The rows should be "indented" alternatingly
+	/// with the first row indented as depicted
+	/// by the example above.
+	/// 
+	/// Each hex field may or may not contain
+	/// a `Field` described by a two-character
+	/// notation where the _first_ character
+	/// denotes the piece type and the _second_
+	/// character the owner color (more details
+	/// can be found in `Field`'s `FromStr`
+	/// implementation). Empty or invalid field contents
+	/// are ignored.
 	/// 
 	/// Note that the format currently does
-	/// not support stacked pieces.
-	pub fn from_ascii_hex_grid(grid: String) -> Self {
-		unimplemented!()
+	/// not support stacked pieces or obstructed
+	/// fields.
+	/// 
+	/// The fields will be returned in the format
+	/// of axial coordinates with the origin being
+	/// located in the center of the board.
+	pub fn from_ascii_hex_grid(grid: impl Into<String>) -> SCResult<Self> {
+		let double_positioned: Vec<_> = grid.into().lines()
+			.map(|l| l.trim())
+			.skip_while(|l| l.is_empty())
+			.skip(2)
+			.step_by(3)
+			.enumerate()
+			.map(|(y, line)| (i32::try_from(y).unwrap(), line))
+			.flat_map(|(y, line)| line
+				.split("|")
+				.filter(|frag| !frag.is_empty())
+				.enumerate()
+				.map(|(x, frag)| (i32::try_from(x).unwrap(), frag))
+				.map(move |(x, frag)| (
+					DoubledCoords::new((2 * x) + ((y + 1) % 2), y),
+					Field::from_str(frag).unwrap_or_default()
+				)))
+			.collect();
+		let center = DoubledCoords::new(
+			double_positioned.iter().map(|(c, _)| c.x()).max().unwrap_or(0),
+			double_positioned.iter().map(|(c, _)| c.y()).max().unwrap_or(0)
+		) / 2;
+		println!("Determined center at {:?}", center);
+		println!("Parsed fields at {:?}", double_positioned.iter().map(|(c, _)| *c - center).collect::<Vec<_>>());
+		let fields: HashMap<_, _> = double_positioned.into_iter()
+			.map(|(c, f)| {
+				println!("{:?} -> {:?}", c - center, AxialCoords::from(c - center)); // DEBUG
+				(AxialCoords::from(c - center), f)
+			})
+			.collect();
+		println!("Fields: {:?}", fields);
+		Ok(Board { fields: fields })
 	}
 
 	/// Fetches a reference to the field at the given
@@ -213,6 +266,11 @@ impl Board {
 	#[inline]
 	pub fn contains_coords(&self, coords: impl Into<AxialCoords>) -> bool {
 		self.fields.contains_key(&coords.into())
+	}
+	
+	/// Tests whether the board has any pieces.
+	pub fn has_pieces(&self) -> bool {
+		self.fields().any(|(_, f)| f.has_pieces())
 	}
 	
 	/// Fetches the (existing) neighbor fields on the board.
@@ -586,6 +644,18 @@ impl FromStr for PlayerColor {
 	}
 }
 
+impl TryFrom<char> for PlayerColor {
+	type Error = SCError;
+
+	fn try_from(c: char) -> SCResult<Self> {
+		match c.to_uppercase().next() {
+			Some('R') => Ok(Self::Red),
+			Some('B') => Ok(Self::Blue),
+			_ => Err(format!("Did not recognize player color {}", c).into())
+		}
+	}
+}
+
 impl From<PlayerColor> for String {
 	fn from(color: PlayerColor) -> String {
 		match color {
@@ -610,6 +680,21 @@ impl FromStr for PieceType {
 	}
 }
 
+impl TryFrom<char> for PieceType {
+	type Error = SCError;
+	
+	fn try_from(c: char) -> SCResult<Self> {
+		match c.to_uppercase().next() {
+			Some('A') => Ok(Self::Ant),
+			Some('B') => Ok(Self::Bee),
+			Some('T') => Ok(Self::Beetle),
+			Some('G') => Ok(Self::Grasshopper),
+			Some('S') => Ok(Self::Spider),
+			_ => Err(format!("Did not recognize piece type {}", c).into())
+		}
+	}
+}
+
 impl From<PieceType> for String {
 	fn from(piece_type: PieceType) -> String {
 		match piece_type {
@@ -619,6 +704,29 @@ impl From<PieceType> for String {
 			PieceType::Grasshopper => "GRASSHOPPER",
 			PieceType::Spider => "SPIDER"
 		}.to_owned()
+	}
+}
+
+lazy_static! {
+	/// The syntax used for fields when parsing
+	/// ASCII hex grid fields.
+	static ref FIELD_SYNTAX: Regex = Regex::new(r"^([A-Z])([A-Z])$").unwrap();
+}
+
+impl FromStr for Field {
+	type Err = SCError;
+	
+	fn from_str(raw: &str) -> SCResult<Self> {
+		if raw.is_empty() {
+			Ok(Self::default())
+		} else {
+			let groups = FIELD_SYNTAX.captures(raw).ok_or_else(|| SCError::from(format!("{} does not match field syntax {}", raw, FIELD_SYNTAX.as_str())))?;
+			let owner = PlayerColor::try_from(groups[2].chars().next().unwrap())?;
+			let piece_type = PieceType::try_from(groups[1].chars().next().unwrap())?;
+			let piece = Piece { piece_type: piece_type, owner: owner };
+			// Obstructed fields and piece stacks are not (yet) supported
+			Ok(Self { piece_stack: vec![piece], is_obstructed: false })
+		}
 	}
 }
 

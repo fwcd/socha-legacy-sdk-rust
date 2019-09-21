@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use socha_client_base::hashmap;
@@ -8,7 +8,7 @@ use socha_client_base::hashmap;
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-axial
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AxialCoords {
 	x: i32,
 	y: i32
@@ -19,7 +19,7 @@ pub struct AxialCoords {
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-cube
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CubeCoords {
 	x: i32,
 	y: i32,
@@ -37,7 +37,7 @@ pub struct CubeCoords {
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-doubled
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DoubledCoords {
 	x: i32,
 	y: i32
@@ -203,6 +203,8 @@ impl<C> Adjacentable for C where C: Into<AxialCoords> {
 	}
 }
 
+// Operator overloads
+
 impl Add for AxialCoords {
 	type Output = Self;
 
@@ -221,6 +223,15 @@ impl<R> Mul<R> for AxialCoords where R: Into<i32> {
 	fn mul(self, rhs: R) -> Self {
 		let other = rhs.into();
 		Self { x: self.x * other, y: self.y * other }
+	}
+}
+
+impl<R> Div<R> for AxialCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn div(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x / other, y: self.y / other }
 	}
 }
 
@@ -267,6 +278,15 @@ impl<R> Mul<R> for CubeCoords where R: Into<i32> {
 	}
 }
 
+impl<R> Div<R> for CubeCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn div(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x / other, y: self.y / other, z: self.z / other }
+	}
+}
+
 impl AddAssign for CubeCoords {
 	fn add_assign(&mut self, rhs: Self) {
 		self.x += rhs.x;
@@ -289,6 +309,58 @@ impl<R> MulAssign<R> for CubeCoords where R: Into<i32> {
 		self.x *= r;
 		self.y *= r;
 		self.z += r;
+	}
+}
+
+impl Add for DoubledCoords {
+	type Output = Self;
+
+	fn add(self, rhs: Self) -> Self { Self { x: self.x + rhs.x, y: self.y + rhs.y } }
+}
+
+impl Sub for DoubledCoords {
+	type Output = Self;
+
+	fn sub(self, rhs: Self) -> Self { Self { x: self.x - rhs.x, y: self.y - rhs.y } }
+}
+
+impl<R> Mul<R> for DoubledCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn mul(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x * other, y: self.y * other }
+	}
+}
+
+impl<R> Div<R> for DoubledCoords where R: Into<i32> {
+	type Output = Self;
+	
+	fn div(self, rhs: R) -> Self {
+		let other = rhs.into();
+		Self { x: self.x / other, y: self.y / other }
+	}
+}
+
+impl AddAssign for DoubledCoords {
+	fn add_assign(&mut self, rhs: Self) {
+		self.x += rhs.x;
+		self.y += rhs.y;
+	}
+}
+
+impl SubAssign for DoubledCoords {
+	fn sub_assign(&mut self, rhs: Self) {
+		self.x -= rhs.x;
+		self.y -= rhs.y;
+	}
+}
+
+impl<R> MulAssign<R> for DoubledCoords where R: Into<i32> {
+	fn mul_assign(&mut self, rhs: R) {
+		let r = rhs.into();
+		self.x *= r;
+		self.y *= r;
 	}
 }
 
