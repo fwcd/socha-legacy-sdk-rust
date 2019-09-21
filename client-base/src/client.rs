@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::io::{self, BufWriter, BufReader, Read, Write};
 use log::{info, debug, warn, error};
 use xml::reader::{XmlEvent as XmlReadEvent, EventReader};
-use xml::writer::{EventWriter, EmitterConfig};
+use xml::writer::EmitterConfig;
 use crate::xml_node::{XmlNode, FromXmlNode};
 use crate::util::SCResult;
 use crate::plugin::{SCPlugin, HasPlayerColor};
