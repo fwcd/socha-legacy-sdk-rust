@@ -6,7 +6,7 @@ use xml::reader::{XmlEvent as XmlReadEvent, EventReader};
 use xml::writer::EmitterConfig;
 use crate::xml_node::{XmlNode, FromXmlNode};
 use crate::util::SCResult;
-use crate::plugin::{SCPlugin, HasPlayerColor};
+use crate::plugin::{SCPlugin, HasPlayerColor, HasTurn};
 use crate::protocol::{Joined, Left, Room, Data, GameResult};
 
 /// A handler that implements the game player's
@@ -129,18 +129,22 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 							self.game_state = Some(state);
 						},
 						Data::MoveRequest => {
-							info!("Got move request");
 							if let Some(ref state) = self.game_state {
-								let new_move = self.delegate.request_move(state, state.player_color());
+								let turn = state.turn();
+								let color = state.player_color();
+								info!("Got move request @ turn: {}, color: {:?}", turn, color);
+
+								let new_move = self.delegate.request_move(state, color);
 								let move_node = XmlNode::try_from(Room::<D::Plugin> {
 									room_id: room.room_id,
 									data: Data::Move(new_move)
 								})?;
+
 								debug!("Sending move {:#?}", move_node);
 								move_node.write_to(&mut xml_writer)?;
 								xml_writer.inner_mut().flush()?;
 							} else {
-								error!("Cannot fulfill move request without a game state!");
+								error!("Got move request, which cannot be fulfilled since no game state is present!");
 							}
 						},
 						Data::GameResult(result) => {

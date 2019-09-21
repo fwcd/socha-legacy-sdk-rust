@@ -1,4 +1,4 @@
-use socha_client_base::plugin::{SCPlugin, HasPlayerColor};
+use socha_client_base::plugin::{SCPlugin, HasPlayerColor, HasTurn};
 use crate::game;
 
 /// The concrete plugin for the "Hive" game.
@@ -18,4 +18,8 @@ impl HasPlayerColor for game::GameState {
 	type PlayerColor = game::PlayerColor;
 	
 	fn player_color(&self) -> game::PlayerColor { self.current_player_color }
+}
+
+impl HasTurn for game::GameState {
+	fn turn(&self) -> u32 { self.turn }
 }

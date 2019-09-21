@@ -9,7 +9,7 @@ use crate::error::SCError;
 pub trait SCPlugin: Debug {
 	type PlayerColor: Copy + Debug + Eq + HasOpponent + FromStr<Err=SCError>;
 	type Player: Clone + Debug + Eq + FromXmlNode;
-	type GameState: Clone + Debug + Eq + FromXmlNode + HasPlayerColor<PlayerColor=Self::PlayerColor>;
+	type GameState: Clone + Debug + Eq + FromXmlNode + HasPlayerColor<PlayerColor=Self::PlayerColor> + HasTurn;
 	type Move: Clone + Debug + Eq + Into<XmlNode>;
 	
 	/// Fetches the 'gameType' used during
@@ -25,4 +25,10 @@ pub trait HasPlayerColor {
 
 	/// Fetches the associated player color.
 	fn player_color(&self) -> Self::PlayerColor;
+}
+
+/// Indicates that the value has a turn.
+pub trait HasTurn {
+	/// Fetches the turn.
+	fn turn(&self) -> u32;
 }
