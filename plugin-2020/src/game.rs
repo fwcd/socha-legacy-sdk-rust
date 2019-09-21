@@ -318,7 +318,10 @@ impl Board {
 		self.fields_owned_by(color)
 			.flat_map(move |(c, _)| self.empty_neighbors(c))
 			.unique()
-			.filter_map(move |(c, _)| if self.is_next_to(opponent, c) { None } else { Some(c) })
+			.filter_map(move |(c, _)| if self.is_next_to(opponent, c) { None } else {
+				trace!("SetMove destination {} does not touch an opponent's piece", c);
+				Some(c)
+			})
 	}
 	
 	/// Performs a depth-first search on the board's non-empty fields
