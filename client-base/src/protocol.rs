@@ -177,7 +177,7 @@ impl FromXmlNode for ScoreFragment {
 		Ok(Self {
 			name: node.attribute("name")?.to_owned(),
 			aggregation: node.attribute("aggregation")?.parse()?,
-			relevant_for_ranking: node.child_by_name("relevantForRanking")?.data().parse()?
+			relevant_for_ranking: node.child_by_name("relevantForRanking")?.content().parse()?
 		})
 	}
 }

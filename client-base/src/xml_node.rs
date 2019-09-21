@@ -12,7 +12,7 @@ use crate::error::SCError;
 #[derive(Debug, Default)]
 pub struct XmlNode {
 	name: String,
-	data: String,
+	content: String,
 	attributes: HashMap<String, String>,
 	childs: Vec<XmlNode>
 }
@@ -21,7 +21,7 @@ pub struct XmlNode {
 /// XML nodes more convenient.
 pub struct XmlNodeBuilder<'a> {
 	name: &'a str,
-	data: &'a str,
+	content: &'a str,
 	attributes: HashMap<String, String>,
 	childs: Vec<XmlNode>
 }
@@ -47,7 +47,7 @@ impl XmlNode {
 				Ok(XmlReadEvent::StartElement { name, attributes, .. }) => {
 					let node = XmlNode {
 						name: name.local_name,
-						data: String::new(),
+						content: String::new(),
 						attributes: attributes.iter().cloned().map(|attr| (attr.name.local_name, attr.value)).collect(),
 						childs: Vec::new()
 					};
@@ -67,7 +67,7 @@ impl XmlNode {
 				},
 				Ok(XmlReadEvent::Characters(content)) => {
 					if let Some(node) = node_stack.back_mut() {
-						node.data += content.as_str();
+						node.content += content.as_str();
 					} else {
 						warn!("Found characters {} outside of any node", content);
 					}
@@ -86,8 +86,8 @@ impl XmlNode {
 		}
 		writer.write(start_element)?;
 		
-		if !self.data.is_empty() {
-			writer.write(XmlWriteEvent::characters(&self.data))?;
+		if !self.content.is_empty() {
+			writer.write(XmlWriteEvent::characters(&self.content))?;
 		}
 
 		for child in &self.childs {
@@ -104,8 +104,8 @@ impl XmlNode {
 	}
 	
 	/// Fetches the node's textual contents.
-	pub fn data(&self) -> &str {
-		self.data.as_str()
+	pub fn content(&self) -> &str {
+		self.content.as_str()
 	}
 	
 	/// Fetches an attribute's value by key.
@@ -129,7 +129,7 @@ impl<'a> XmlNodeBuilder<'a> {
 	/// Creates a new XML node builder with the
 	/// specified tag name.
 	pub fn new(name: &'a str) -> Self {
-		Self { name: name, data: "", attributes: HashMap::new(), childs: Vec::new() }
+		Self { name: name, content: "", attributes: HashMap::new(), childs: Vec::new() }
 	}
 	
 	/// Sets the tag name of the XML node.
@@ -139,8 +139,8 @@ impl<'a> XmlNodeBuilder<'a> {
 	}
 	
 	/// Sets the contents of the XML node.
-	pub fn data(mut self, data: &'a str) -> Self {
-		self.data = data;
+	pub fn content(mut self, data: &'a str) -> Self {
+		self.content = data;
 		self
 	}
 	
@@ -178,7 +178,7 @@ impl<'a> XmlNodeBuilder<'a> {
 	pub fn build(self) -> XmlNode {
 		XmlNode {
 			name: self.name.to_owned(),
-			data: self.data.to_owned(),
+			content: self.content.to_owned(),
 			attributes: self.attributes,
 			childs: self.childs
 		}
