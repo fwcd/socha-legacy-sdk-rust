@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use std::io::{Read, Write};
 use xml::reader::{EventReader, XmlEvent as XmlReadEvent};
 use xml::writer::{EventWriter, XmlEvent as XmlWriteEvent};
+use log::{warn, error};
 use crate::util::SCResult;
 use crate::error::SCError;
 
@@ -52,18 +53,24 @@ impl XmlNode {
 					};
 					node_stack.push_back(node);
 				},
-				Ok(XmlReadEvent::EndElement { .. }) => {
-					let node = node_stack.pop_back().ok_or_else(|| "Unexpectedly found empty XML node stack while popping off node".to_owned())?;
-					if let Some(mut parent) = node_stack.pop_back() {
-						parent.childs.push(node);
-						node_stack.push_back(parent);
+				Ok(XmlReadEvent::EndElement { name }) => {
+					if let Some(node) = node_stack.pop_back() {
+						if let Some(mut parent) = node_stack.pop_back() {
+							parent.childs.push(node);
+							node_stack.push_back(parent);
+						} else {
+							return Ok(node);
+						}
 					} else {
-						return Ok(node);
+						error!("Found closing element </{}> without an opening element before", name);
 					}
 				},
 				Ok(XmlReadEvent::Characters(content)) => {
-					let node = node_stack.back_mut().ok_or_else(|| "Unexpectedly found empty XML node stack while trying to add characters".to_owned())?;
-					node.data += content.as_str();
+					if let Some(node) = node_stack.back_mut() {
+						node.data += content.as_str();
+					} else {
+						warn!("Found characters {} outside of any node", content);
+					}
 				},
 				Err(e) => return Err(e.into()),
 				_ => ()
@@ -79,7 +86,9 @@ impl XmlNode {
 		}
 		writer.write(start_element)?;
 		
-		// TODO: Write data/contents as characters
+		if !self.data.is_empty() {
+			writer.write(XmlWriteEvent::characters(&self.data))?;
+		}
 
 		for child in &self.childs {
 			child.write_to(writer)?;
