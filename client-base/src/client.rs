@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::io::{self, BufWriter, BufReader, Read, Write};
 use log::{info, debug, warn, error};
 use xml::reader::{XmlEvent as XmlReadEvent, EventReader};
-use xml::writer::{EventWriter};
+use xml::writer::{EventWriter, EmitterConfig};
 use crate::xml_node::{XmlNode, FromXmlNode};
 use crate::util::SCResult;
 use crate::plugin::{SCPlugin, HasPlayerColor};
@@ -98,7 +98,11 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 	/// from the provided reader.
 	fn run_game<R, W>(mut self, reader: R, writer: W) -> SCResult<()> where R: Read, W: Write {
 		let mut xml_reader = EventReader::new(reader);
-		let mut xml_writer = EventWriter::new(writer);
+
+		let mut emitter_config = EmitterConfig::new();
+		emitter_config.write_document_declaration = false;
+
+		let mut xml_writer = emitter_config.create_writer(writer);
 		
 		// Read initial protocol element
 		info!("Waiting for initial <protocol>...");
