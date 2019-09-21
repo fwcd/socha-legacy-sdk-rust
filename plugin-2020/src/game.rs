@@ -336,7 +336,7 @@ impl Board {
 	}
 	
 	/// Fetches the possible destinations for a SetMove.
-	fn set_move_destinations<'a>(&'a self, color: PlayerColor) -> impl Iterator<Item=AxialCoords> + 'a {
+	fn possible_set_move_destinations<'a>(&'a self, color: PlayerColor) -> impl Iterator<Item=AxialCoords> + 'a {
 		let opponent = color.opponent();
 
 		trace!("Looking for SetMove destinations on board...");
@@ -606,7 +606,7 @@ impl GameState {
 			}
 		} else {
 			trace!("Querying SetMove destinations...");
-			self.board.set_move_destinations(color).collect()
+			self.board.possible_set_move_destinations(color).collect()
 		};
 
 		let destinations = destination_coords.into_iter()
