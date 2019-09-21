@@ -292,6 +292,8 @@ impl<R> MulAssign<R> for CubeCoords where R: Into<i32> {
 	}
 }
 
+// Direct conversions
+
 impl From<CubeCoords> for AxialCoords {
 	fn from(coords: CubeCoords) -> Self { Self { x: coords.x, y: coords.y } }
 }
@@ -302,19 +304,27 @@ impl From<AxialCoords> for CubeCoords {
 
 impl From<AxialCoords> for DoubledCoords {
 	fn from(coords: AxialCoords) -> Self {
-		let shift = coords.y.abs() % 2;
-		let offset = coords.y / 2 + shift;
-		Self { x: 2 * (coords.x - offset) + shift, y: -coords.y }
+		Self { x: 2 * coords.x - coords.y, y: -coords.y }
 	}
 }
 
 impl From<DoubledCoords> for AxialCoords {
 	fn from(coords: DoubledCoords) -> Self {
-		let shift = coords.y.abs() % 2;
-		let offset = -coords.y / 2 + shift;
-		Self { x: ((coords.x - shift) / 2) + offset, y: -coords.y }
+		Self { x: (coords.x - coords.y) / 2, y: -coords.y }
 	}
 }
+
+// Transitive conversions
+
+impl From<CubeCoords> for DoubledCoords {
+	fn from(coords: CubeCoords) -> Self { Self::from(AxialCoords::from(coords)) }
+}
+
+impl From<DoubledCoords> for CubeCoords {
+	fn from(coords: DoubledCoords) -> Self { Self::from(AxialCoords::from(coords)) }
+}
+
+// Other conversions
 
 impl From<CubeCoords> for HashMap<String, String> {
 	fn from(coords: CubeCoords) -> Self {
