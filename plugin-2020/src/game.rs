@@ -413,7 +413,7 @@ impl Board {
 			let mut neighbors = self.accessible_neighbors(path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
 			if path.len() < 3 {
 				paths_queue.extend(neighbors.map(|(c, _)| {
-					let mut next_path = ArrayVec::new();
+					let mut next_path = path.clone();
 					next_path.push(c);
 					next_path
 				}));
