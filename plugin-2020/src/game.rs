@@ -872,8 +872,8 @@ impl FromXmlNode for Player {
 
 impl FromXmlNode for Board {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
-		Ok(Self::filling_radius(6, node.child_by_name("fields")?
-				.childs_by_name("field")
+		Ok(Self::filling_radius(6, node.childs_by_name("fields")
+			.flat_map(|child| child.childs_by_name("field")
 				.map(|f| Ok((
 					CubeCoords::new(
 						f.attribute("x")?.parse()?,
@@ -881,8 +881,8 @@ impl FromXmlNode for Board {
 						f.attribute("z")?.parse()?
 					).into(),
 					Field::from_node(f)?
-				)))
-				.collect::<SCResult<HashMap<AxialCoords, Field>>>()?
+				))))
+			.collect::<SCResult<HashMap<AxialCoords, Field>>>()?
 		))
 	}
 }
