@@ -132,25 +132,36 @@ impl Field {
 	pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }
 	
 	/// Tests whether the field is owned by the given owner.
+	#[inline]
 	pub fn is_owned_by(&self, color: PlayerColor) -> bool { self.owner() == Some(color) }
 	
 	/// Tests whether the field is occupied.
+	#[inline]
 	pub fn is_occupied(&self) -> bool { self.is_obstructed || self.has_pieces() }
 	
+	/// Tests whether the field is not occupied.
+	#[inline]
+	pub fn is_empty(&self) -> bool { !self.is_occupied() }
+	
 	/// Fetches the top-most piece.
+	#[inline]
 	pub fn piece(&self) -> Option<Piece> { self.piece_stack.last().cloned() }
 	
 	/// Tests whether the field contains pieces.
+	#[inline]
 	pub fn has_pieces(&self) -> bool { !self.piece_stack.is_empty() }
 	
 	/// Fetches the piece stack.
+	#[inline]
 	pub fn piece_stack(&self) -> &Vec<Piece> { &self.piece_stack }
 	
 	/// Pushes a piece onto the piece stack.
+	#[inline]
 	pub fn push(&mut self, piece: Piece) { self.piece_stack.push(piece) }
 	
 	/// Pops a piece from the piece stack or
 	/// returns `None` if the stack is empty.
+	#[inline]
 	pub fn pop(&mut self) -> Option<Piece> { self.piece_stack.pop() }
 }
 
@@ -287,7 +298,7 @@ impl Board {
 	
 	/// Fetches all empty fields.
 	pub fn empty_fields(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
-		self.fields().filter(|(_, f)| !f.is_occupied())
+		self.fields().filter(|(_, f)| f.is_empty())
 	}
 	
 	/// Fetches all occupied fields.
@@ -326,7 +337,7 @@ impl Board {
 	
 	/// Fetches the unoccupied neighbor fields.
 	pub fn empty_neighbors(&self, coords: impl Into<AxialCoords>) -> impl Iterator<Item=(AxialCoords, &Field)> {
-		self.neighbors(coords).filter(|(_, f)| !f.is_occupied())
+		self.neighbors(coords).filter(|(_, f)| f.is_empty())
 	}
 	
 	/// Tests whether the bee of the given color has been placed.
@@ -436,12 +447,12 @@ impl Board {
 	/// locations is possible.
 	pub fn can_move_between(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> bool {
 		let shared = self.shared_neighbors(a, b);
-		(shared.len() == 1 || shared.iter().any(|(_, f)| !f.is_obstructed)) && shared.iter().any(|(_, f)| f.has_pieces())
+		(shared.len() == 1 || shared.iter().any(|(_, f)| f.is_empty())) && shared.iter().any(|(_, f)| f.has_pieces())
 	}
 	
 	/// Finds the accessible neighbors.
 	pub fn accessible_neighbors<'a>(&'a self, coords: impl Into<AxialCoords> + Copy + 'a) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
-		self.neighbors(coords).filter(move |(c, _)| self.can_move_between(coords, *c))
+		self.neighbors(coords).filter(move |(c, f)| f.is_empty() && self.can_move_between(coords, *c))
 	}
 	
 	/// Tests whether two coordinates are connected by a path
@@ -516,7 +527,7 @@ impl GameState {
 			Err("Grasshopper can only move along straight lines".into())
 		} else if start.is_adjacent_to(destination) {
 			Err("Grasshopper must not move to a neighbor".into())
-		} else if start.line_iter(destination).map(|c| AxialCoords::from(c)).any(|c| self.board.field(c).map(|f| !f.is_occupied()).unwrap_or(false)) {
+		} else if start.line_iter(destination).map(|c| AxialCoords::from(c)).any(|c| self.board.field(c).map(|f| f.is_empty()).unwrap_or(false)) {
 			Err("Grasshopper cannot move over empty fields".into())
 		} else {
 			Ok(())
