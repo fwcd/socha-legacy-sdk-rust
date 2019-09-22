@@ -821,7 +821,7 @@ impl fmt::Display for Board {
 
 		for y in min_y..=max_y {
 			for x in min_x..=max_x {
-				if let Some(field) = self.field(AxialCoords::new(x, y)) {
+				if let Some(field) = self.field(AxialCoords::new(-x, -y)) {
 					write!(f, "{}", field)?;
 				} else {
 					write!(f, "00")?;

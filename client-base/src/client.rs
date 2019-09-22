@@ -113,7 +113,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 
 		loop {
 			let node = XmlNode::read_from(&mut xml_reader)?;
-			debug!("Got XML node {:#?}", node);
+			debug!("Got XML node {:?}", node);
 			
 			match node.name() {
 				// Try parsing as room message (the game is running)
@@ -140,7 +140,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 									data: Data::Move(new_move)
 								})?;
 
-								debug!("Sending move {:#?}", move_node);
+								debug!("Sending move {:?}", move_node);
 								move_node.write_to(&mut xml_writer)?;
 								xml_writer.inner_mut().flush()?;
 							} else {
