@@ -186,7 +186,7 @@ impl FromXmlNode for PlayerScore {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			cause: node.attribute("cause")?.parse()?,
-			reason: node.attribute("reason")?.to_owned()
+			reason: node.attribute("reason").map(|s| s.to_owned()).unwrap_or_default()
 		})
 	}
 }
