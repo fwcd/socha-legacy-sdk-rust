@@ -206,8 +206,8 @@ impl Board {
 	/// Each hex field may or may not contain
 	/// a `Field` described by a two-character
 	/// notation where the _first_ character
-	/// denotes the piece type and the _second_
-	/// character the owner color (more details
+	/// denotes the owner color and the _second_
+	/// character the piece type (more details
 	/// can be found in `Field`'s `FromStr`
 	/// implementation). Empty or invalid field contents
 	/// are ignored.
@@ -760,8 +760,8 @@ impl FromStr for Field {
 	
 	/// Converts a field in a two-character notation
 	/// to a field. The first character denotes the
-	/// piece type and the second character describes
-	/// the player color.
+	/// player color and the second character describes the
+	/// piece type.
 	/// 
 	/// Obstructed fields and piece stacks are not (yet)
 	/// supported.
@@ -770,8 +770,8 @@ impl FromStr for Field {
 			Ok(Self::default())
 		} else {
 			let groups = FIELD_SYNTAX.captures(raw).ok_or_else(|| SCError::from(format!("{} does not match field syntax {}", raw, FIELD_SYNTAX.as_str())))?;
-			let owner = PlayerColor::try_from(groups[2].chars().next().unwrap())?;
-			let piece_type = PieceType::try_from(groups[1].chars().next().unwrap())?;
+			let owner = PlayerColor::try_from(groups[1].chars().next().unwrap())?;
+			let piece_type = PieceType::try_from(groups[2].chars().next().unwrap())?;
 			let piece = Piece { piece_type: piece_type, owner: owner };
 			Ok(Self { piece_stack: vec![piece], is_obstructed: false })
 		}
