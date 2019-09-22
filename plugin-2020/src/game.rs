@@ -403,7 +403,7 @@ impl Board {
 				if search_condition(coords, field) {
 					return true;
 				} else {
-					queue.extend(self.accessible_neighbors(coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
+					queue.extend(self.accessible_neighbors_except(Some(start), coords).filter_map(|(c, _)| if !visited.contains(&c) { Some(c) } else { None }));
 				}
 			}
 		}
@@ -422,7 +422,7 @@ impl Board {
 		});
 
 		while let Some(path) = paths_queue.pop_front() {
-			let mut neighbors = self.accessible_neighbors(path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
+			let mut neighbors = self.accessible_neighbors_except(Some(start), path.last().cloned().unwrap()).filter(|(c, _)| !path.contains(c));
 			if path.len() < 3 {
 				paths_queue.extend(neighbors.map(|(c, _)| {
 					let mut next_path = path.clone();
@@ -437,18 +437,34 @@ impl Board {
 		false
 	}
 	
-	/// Finds the intersection between `a`'s and `b`'s neighbors.
-	pub fn shared_neighbors(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> Vec<(AxialCoords, &Field)> {
+	/// Finds the intersection between `a`'s and `b`'s neighbors,
+	/// optionally given an exception whose field won't be included
+	/// if it contains exactly one piece.
+	pub fn shared_neighbors(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>, exception: Option<AxialCoords>) -> Vec<(AxialCoords, &Field)> {
 		let a_neighbors: HashSet<_> = self.neighbors(a).collect();
 		let b_neighbors: HashSet<_> = self.neighbors(b).collect();
-		a_neighbors.intersection(&b_neighbors).cloned().collect()
+		a_neighbors.intersection(&b_neighbors)
+			.filter(|(c, f)| f.piece_stack().len() != 1 || exception == Some(*c))
+			.cloned().collect()
+	}
+	
+	/// Tests whether a move between the given two
+	/// locations is possible, optionally given an
+	/// exception.
+	pub fn can_move_between_except(&self, exception: Option<AxialCoords>, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> bool {
+		let shared = self.shared_neighbors(a, b, exception);
+		(shared.len() == 1 || shared.iter().any(|(_, f)| f.is_empty())) && shared.iter().any(|(_, f)| f.has_pieces())
 	}
 	
 	/// Tests whether a move between the given two
 	/// locations is possible.
 	pub fn can_move_between(&self, a: impl Into<AxialCoords>, b: impl Into<AxialCoords>) -> bool {
-		let shared = self.shared_neighbors(a, b);
-		(shared.len() == 1 || shared.iter().any(|(_, f)| f.is_empty())) && shared.iter().any(|(_, f)| f.has_pieces())
+		self.can_move_between_except(None, a, b)
+	}
+	
+	/// Finds the accessible neighbors, optionally except an ignored field.
+	pub fn accessible_neighbors_except<'a>(&'a self, exception: Option<AxialCoords>, coords: impl Into<AxialCoords> + Copy + 'a) -> impl Iterator<Item=(AxialCoords, &Field)> + 'a {
+		self.neighbors(coords).filter(move |(c, f)| f.is_empty() && self.can_move_between_except(exception, coords, *c))
 	}
 	
 	/// Finds the accessible neighbors.
@@ -516,7 +532,7 @@ impl GameState {
 	
 	fn validate_beetle_move(&self, start: AxialCoords, destination: AxialCoords) -> SCResult<()> {
 		self.validate_adjacent(start, destination)?;
-		if self.board.shared_neighbors(start, destination).iter().any(|(_, f)| f.has_pieces()) || self.board.field(destination).map(|f| f.has_pieces()).unwrap_or(false) {
+		if self.board.shared_neighbors(start, destination, None).iter().any(|(_, f)| f.has_pieces()) || self.board.field(destination).map(|f| f.has_pieces()).unwrap_or(false) {
 			Ok(())
 		} else {
 			Err("Beetle has to move along swarm".into())
