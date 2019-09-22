@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryFrom;
 use std::cmp::{max, min};
 use std::str::FromStr;
+use std::fmt;
 use socha_client_base::util::{SCResult, HasOpponent};
 use socha_client_base::error::SCError;
 use socha_client_base::xml_node::{FromXmlNode, XmlNode, XmlNodeBuilder};
@@ -698,6 +699,15 @@ impl TryFrom<char> for PlayerColor {
 	}
 }
 
+impl From<PlayerColor> for char {
+	fn from(color: PlayerColor) -> char {
+		match color {
+			PlayerColor::Red => 'R',
+			PlayerColor::Blue => 'B'
+		}
+	}
+}
+
 impl From<PlayerColor> for String {
 	fn from(color: PlayerColor) -> String {
 		match color {
@@ -733,6 +743,18 @@ impl TryFrom<char> for PieceType {
 			Some('G') => Ok(Self::Grasshopper),
 			Some('S') => Ok(Self::Spider),
 			_ => Err(format!("Did not recognize piece type {}", c).into())
+		}
+	}
+}
+
+impl From<PieceType> for char {
+	fn from(piece_type: PieceType) -> char {
+		match piece_type {
+			PieceType::Ant => 'A',
+			PieceType::Bee => 'B',
+			PieceType::Beetle => 'T',
+			PieceType::Grasshopper => 'G',
+			PieceType::Spider => 'S'
 		}
 	}
 }
@@ -774,6 +796,16 @@ impl FromStr for Field {
 			let piece_type = PieceType::try_from(groups[2].chars().next().unwrap())?;
 			let piece = Piece { piece_type: piece_type, owner: owner };
 			Ok(Self { piece_stack: vec![piece], is_obstructed: false })
+		}
+	}
+}
+
+impl fmt::Display for Field {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		if let Some(piece) = self.piece() {
+			write!(f, "{}{}", char::from(piece.owner), char::from(piece.piece_type))
+		} else {
+			write!(f, "[]")
 		}
 	}
 }

@@ -4,7 +4,7 @@
 use arrayvec::ArrayVec;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div};
 use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
+use std::fmt;
 use socha_client_base::hashmap;
 
 /// Axial coordinates on the hex grid.
@@ -158,20 +158,20 @@ impl DoubledCoords {
 	pub fn y(self) -> i32 { self.y }
 }
 
-impl Display for AxialCoords {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for AxialCoords {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "({}, {})", self.x, self.y)
 	}
 }
 
-impl Display for CubeCoords {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for CubeCoords {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "({}, {}, {})", self.x, self.y, self.z)
 	}
 }
 
-impl Display for DoubledCoords {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for DoubledCoords {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "({}, {})", self.x, self.y)
 	}
 }
