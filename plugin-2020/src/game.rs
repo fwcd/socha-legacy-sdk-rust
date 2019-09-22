@@ -51,6 +51,8 @@ pub struct GameState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
 	// TODO: Store fields contiguously in a Vec
+	// or ideally a fixed-size container such
+	// as an array or an ArrayVec.
 	// and convert between coords and indices
 	fields: HashMap<AxialCoords, Field>
 }
