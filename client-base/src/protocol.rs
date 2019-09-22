@@ -176,7 +176,7 @@ impl FromXmlNode for ScoreFragment {
 	fn from_node(node: &XmlNode) -> SCResult<Self> {
 		Ok(Self {
 			name: node.attribute("name")?.to_owned(),
-			aggregation: node.attribute("aggregation")?.parse()?,
+			aggregation: node.child_by_name("aggregation")?.content().parse()?,
 			relevant_for_ranking: node.child_by_name("relevantForRanking")?.content().parse()?
 		})
 	}
