@@ -1,3 +1,6 @@
+//! Defines useful structures for geometry on
+//! hexagonal grids.
+
 use arrayvec::ArrayVec;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div};
 use std::collections::HashMap;
@@ -27,10 +30,24 @@ pub struct CubeCoords {
 }
 
 /// Offset coordinates with a doubled vertical
-/// step size on the hex grid. Note that the y-axis
-/// points _downwards_ with `DoubleCoords`, whereas
-/// it points _upwards_ when using `AxialCoords` or
-/// `CubeCoords`.
+/// step size on the hex grid. When converting
+/// to `AxialCoords`, these coordinates are
+/// interpreted with the following axes:
+/// 
+/// ```ignore
+/// +--> x
+/// |
+/// v y
+/// ```
+/// 
+/// ...and use the following axes after the
+/// conversion to `AxialCoords`:
+/// 
+/// ```ignore
+///  y ^   ^ x
+///     \ /  
+///      +
+/// ```
 /// 
 /// These are especially useful when dealing with
 /// ASCII hex-grids.
@@ -376,13 +393,13 @@ impl From<AxialCoords> for CubeCoords {
 
 impl From<AxialCoords> for DoubledCoords {
 	fn from(coords: AxialCoords) -> Self {
-		Self { x: 2 * coords.x - coords.y, y: -coords.y }
+		Self { x: coords.x - coords.y, y: -(coords.x + coords.y) }
 	}
 }
 
 impl From<DoubledCoords> for AxialCoords {
 	fn from(coords: DoubledCoords) -> Self {
-		Self { x: (coords.x - coords.y) / 2, y: -coords.y }
+		Self { x: (coords.x - coords.y) / 2, y: -(coords.x + coords.y) / 2 }
 	}
 }
 

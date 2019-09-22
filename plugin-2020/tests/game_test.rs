@@ -63,11 +63,11 @@ pub fn test_filled_ascii_hex_grid() {
 		}), false))
 	]);
 	assert_unordered_eq!(board.fields_owned_by(PlayerColor::Blue).map(|(c, f)| (c, f.clone())), vec![
-		(AxialCoords::new(1, 1), Field::new(once(Piece {
+		(AxialCoords::new(1, 0), Field::new(once(Piece {
 			piece_type: PieceType::Ant,
 			owner: PlayerColor::Blue
 		}), false)),
-		(AxialCoords::new(2, 1), Field::new(once(Piece {
+		(AxialCoords::new(2, -1), Field::new(once(Piece {
 			piece_type: PieceType::Ant,
 			owner: PlayerColor::Blue
 		}), false))
