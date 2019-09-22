@@ -342,7 +342,8 @@ impl Board {
 	
 	/// Tests whether the bee of the given color has been placed.
 	pub fn has_placed_bee(&self, color: PlayerColor) -> bool {
-		self.fields().flat_map(|(_, f)| f.piece_stack()).any(|p| p.owner == color)
+		let bee = Piece { piece_type: PieceType::Bee, owner: color };
+		self.fields().flat_map(|(_, f)| f.piece_stack()).any(|&p| p == bee)
 	}
 	
 	/// Tests whether the field at the given coordinates is next to
