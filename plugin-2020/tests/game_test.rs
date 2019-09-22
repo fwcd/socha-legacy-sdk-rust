@@ -1,5 +1,7 @@
 use std::iter::once;
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use more_asserts::assert_lt;
 use socha_plugin_2020::game::{Board, PlayerColor, Field, Piece, PieceType, BOARD_RADIUS, FIELD_COUNT};
 use socha_plugin_2020::util::{AxialCoords, CubeCoords};
 
@@ -78,8 +80,25 @@ pub fn test_filled_ascii_hex_grid() {
 fn test_filling_radius() {
 	let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
 	assert_eq!(board.fields().count(), FIELD_COUNT);
-	for (coords, _) in board.fields() {
-		let cube_coords = CubeCoords::from(coords);
-		assert_eq!(cube_coords.x() + cube_coords.y() + cube_coords.z(), 0);
+	for coords in board.fields().map(|(c, _)| CubeCoords::from(c)) {
+		assert_eq!(coords.x() + coords.y() + coords.z(), 0);
+	}
+}
+
+#[test]
+fn fields_and_neighbors() {
+	let board = Board::filling_radius(2, HashMap::new());
+	let origin = AxialCoords::new(0, 0);
+	assert_unordered_eq!(board.fields().map(|(c, _)| c), once(origin).chain(origin.coord_neighbors()))
+}
+
+#[test]
+fn neighbors_in_bounds() {
+	let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
+	let radius = i32::try_from(BOARD_RADIUS).unwrap();
+	for coords in board.fields().flat_map(|(c, _)| board.neighbors(c)).map(|(c, _)| CubeCoords::from(c)) {
+		assert_lt!(coords.x().abs(), radius);
+		assert_lt!(coords.y().abs(), radius);
+		assert_lt!(coords.z().abs(), radius);
 	}
 }

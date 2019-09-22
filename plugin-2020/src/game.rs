@@ -168,8 +168,8 @@ impl Board {
 		let mut fields: HashMap<_, _> = fields.into();
 		let outer = i32::try_from(radius).expect("Radius is too large to fit in a 32-bit (signed) int");
 		let inner = outer - 1;
-		let all_coords = ((-inner)..outer)
-			.flat_map(|y| (max(y - inner, -inner)..(min(y + inner, inner) + 1))
+		let all_coords = ((-inner)..=inner)
+			.flat_map(|y| (max(-(inner + y), -inner)..=min(inner - y, inner))
 				.map(move |x| AxialCoords::new(x, y)));
 		
 		for coords in all_coords {
