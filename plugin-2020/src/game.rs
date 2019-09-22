@@ -166,7 +166,9 @@ impl Board {
 	/// fields, the board is padded with empty fields up to the
 	/// given radius.
 	pub fn filling_radius(radius: usize, fields: impl Into<HashMap<AxialCoords, Field>>) -> Self {
-		let mut fields: HashMap<_, _> = fields.into();
+		let mut fields_mut: HashMap<_, _> = fields.into();
+		trace!("Filling up board, occupied fields: {:?}", fields_mut.iter().filter(|(_, f)| f.is_occupied()).collect::<Vec<_>>());
+
 		let outer = i32::try_from(radius).expect("Radius is too large to fit in a 32-bit (signed) int");
 		let inner = outer - 1;
 		let all_coords = ((-inner)..=inner)
@@ -174,12 +176,15 @@ impl Board {
 				.map(move |x| AxialCoords::new(x, y)));
 		
 		for coords in all_coords {
-			if !fields.contains_key(&coords) {
-				fields.insert(coords, Field::default());
+			if !fields_mut.contains_key(&coords) {
+				fields_mut.insert(coords, Field::default());
+				trace!("Filling up field at {}", coords);
 			}
 		}
-	
-		Self { fields: fields }
+		
+		let board = Self { fields: fields_mut };
+		trace!("Created board with occupied fields {:?}", board.occupied_fields().collect::<Vec<_>>());
+		board
 	}
 
 	/// Parses a board from a plain text
@@ -283,6 +288,11 @@ impl Board {
 	/// Fetches all empty fields.
 	pub fn empty_fields(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
 		self.fields().filter(|(_, f)| !f.is_occupied())
+	}
+	
+	/// Fetches all occupied fields.
+	pub fn occupied_fields(&self) -> impl Iterator<Item=(AxialCoords, &Field)> {
+		self.fields().filter(|(_, f)| f.is_occupied())
 	}
 	
 	/// Fetches empty fields connected to the swarm.
