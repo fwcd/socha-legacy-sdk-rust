@@ -102,12 +102,12 @@ impl AxialCoords {
 	#[inline]
 	pub fn coord_neighbors(self) -> ArrayVec<[AxialCoords; 6]> {
 		ArrayVec::from([
-			self + AxialCoords::new(-1, 0),
 			self + AxialCoords::new(0, 1),
-			self + AxialCoords::new(1, 1),
 			self + AxialCoords::new(1, 0),
+			self + AxialCoords::new(1, -1),
 			self + AxialCoords::new(0, -1),
-			self + AxialCoords::new(-1, -1)
+			self + AxialCoords::new(-1, 0),
+			self + AxialCoords::new(-1, 1)
 		])
 	}
 }
