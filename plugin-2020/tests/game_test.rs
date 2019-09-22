@@ -93,6 +93,19 @@ fn fields_and_neighbors() {
 }
 
 #[test]
+fn board_display() {
+	let board = Board::filling_radius(4, HashMap::new());
+	assert_eq!(format!("{}", board), r#"000000[][][][]
+0000[][][][][]
+00[][][][][][]
+[][][][][][][]
+[][][][][][]00
+[][][][][]0000
+[][][][]000000
+"#.to_owned());
+}
+
+#[test]
 fn neighbors_in_bounds() {
 	let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
 	let radius = i32::try_from(BOARD_RADIUS).unwrap();

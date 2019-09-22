@@ -810,6 +810,28 @@ impl fmt::Display for Field {
 	}
 }
 
+impl fmt::Display for Board {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		let min_x = self.fields().map(|(c, _)| c.x()).min().ok_or(fmt::Error)?;
+		let min_y = self.fields().map(|(c, _)| c.y()).min().ok_or(fmt::Error)?;
+		let max_x = self.fields().map(|(c, _)| c.x()).max().ok_or(fmt::Error)?;
+		let max_y = self.fields().map(|(c, _)| c.y()).max().ok_or(fmt::Error)?;
+
+		for y in min_y..=max_y {
+			for x in min_x..=max_x {
+				if let Some(field) = self.field(AxialCoords::new(x, y)) {
+					write!(f, "{}", field)?;
+				} else {
+					write!(f, "00")?;
+				}
+			}
+			writeln!(f)?;
+		}
+
+		Ok(())
+	}
+}
+
 // XML conversions
 
 impl FromXmlNode for GameState {
