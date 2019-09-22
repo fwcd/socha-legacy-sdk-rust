@@ -1,6 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
 use std::fmt;
+use std::str;
 use std::io::{Read, Write, Cursor};
 use xml::reader::{EventReader, XmlEvent as XmlReadEvent};
 use xml::writer::{EventWriter, EmitterConfig, XmlEvent as XmlWriteEvent};
@@ -131,10 +132,9 @@ impl fmt::Display for XmlNode {
 		let mut config = EmitterConfig::new();
 		config.write_document_declaration = false;
 		config.perform_indent = true;
-		let writer = config.create_writer(Cursor::new(Vec::new()));
-		let mut string = String::new();
-		writer.into_inner().read_to_string(&mut string).map_err(|_| fmt::Error)?;
-		f.write_str(&string)
+		let mut writer = config.create_writer(Cursor::new(Vec::new()));
+		self.write_to(&mut writer).map_err(|_| fmt::Error)?;
+		write!(f, "{}", str::from_utf8(&writer.into_inner().into_inner()).map_err(|_| fmt::Error)?)
 	}
 }
 
