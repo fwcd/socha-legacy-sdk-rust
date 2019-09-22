@@ -1,8 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::fmt;
+use std::io::{Read, Write, Cursor};
 use xml::reader::{EventReader, XmlEvent as XmlReadEvent};
-use xml::writer::{EventWriter, XmlEvent as XmlWriteEvent};
+use xml::writer::{EventWriter, EmitterConfig, XmlEvent as XmlWriteEvent};
 use log::{warn, error};
 use crate::util::SCResult;
 use crate::error::SCError;
@@ -124,6 +125,18 @@ impl XmlNode {
 	}
 }
 
+impl fmt::Display for XmlNode {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		// Writes the node as XML
+		let mut config = EmitterConfig::new();
+		config.write_document_declaration = false;
+		config.perform_indent = true;
+		let writer = config.create_writer(Cursor::new(Vec::new()));
+		let mut string = String::new();
+		writer.into_inner().read_to_string(&mut string).map_err(|_| fmt::Error)?;
+		f.write_str(&string)
+	}
+}
 
 impl<'a> XmlNodeBuilder<'a> {
 	/// Creates a new XML node builder with the

@@ -113,7 +113,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
 
 		loop {
 			let node = XmlNode::read_from(&mut xml_reader)?;
-			debug!("Got XML node {:?}", node);
+			debug!("Got XML node {}", node);
 			
 			match node.name() {
 				// Try parsing as room message (the game is running)
