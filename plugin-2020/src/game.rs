@@ -658,6 +658,8 @@ impl GameState {
 	/// Fetches a list of possible moves for a given color.
 	pub fn possible_moves(&self, color: PlayerColor) -> Vec<Move> {
 		trace!("Finding possible moves for color {:?}", color);
+		trace!("Current board state:\n{}", self.board);
+
 		let mut moves = self.possible_set_moves(color);
 		moves.extend(self.possible_drag_moves(color));
 		moves
