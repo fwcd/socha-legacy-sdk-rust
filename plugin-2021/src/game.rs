@@ -1,4 +1,5 @@
-use socha_client_base::{error::SCError, util::HasOpponent};
+use socha_client_base::{error::SCError, util::{SCResult, HasOpponent}};
+use std::{str::FromStr, convert::TryFrom};
 
 // Structures
 
@@ -42,6 +43,34 @@ pub struct Board {
     pub fields: Vec<Vec<Color>>
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Move {
+    pub piece: Piece,
+    /// The coordinates the upper left corner this piece is placed on.
+    pub position: Coordinates
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Piece {
+    pub kind: i32,
+    pub rotation: Rotation,
+    pub color: Color
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Rotation {
+    None,
+    Right,
+    Mirror,
+    Left
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Coordinates {
+    pub x: i32,
+    pub y: i32
+}
+
 impl HasOpponent for Team {
     fn opponent(self) -> Self {
         match self {
@@ -73,6 +102,31 @@ impl From<Team> for String {
             Team::None => "NONE",
             Team::One => "ONE",
             Team::Two => "TWO"
+        }
+    }
+}
+
+impl TryFrom<i32> for Rotation {
+    type Err = SCError;
+
+    fn from(n: i32) -> SCResult<Self> {
+        match n {
+            0 => Ok(Self::None),
+            1 => Ok(Self::Right),
+            2 => Ok(Self::Mirror),
+            3 => Ok(Self::Left),
+            _ => Err(format!("Could not parse rotation {}", n).into())
+        }
+    }
+}
+
+impl From<Rotation> for i32 {
+    fn from(rotation: Rotation) -> Self {
+        match rotation {
+            Rotation::None => 0,
+            Rotation::Right => 1,
+            Rotation::Mirror => 2,
+            Rotation::Left => 3
         }
     }
 }
