@@ -15,6 +15,18 @@ macro_rules! hashmap {
     }}
 }
 
+/// Creates a new HashSet using a literal-like syntax.
+#[macro_export]
+macro_rules! hashset {
+    [ $($value:expr),* ] => {{
+        let mut m = ::std::collections::HashSet::new();
+        $(
+            m.insert($value.into());
+        )+
+        m
+    }}
+}
+
 /// A shorthand notation for `Result<T, SCError>`.
 pub type SCResult<T> = Result<T, SCError>;
 
