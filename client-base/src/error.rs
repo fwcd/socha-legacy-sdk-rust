@@ -10,43 +10,43 @@ use xml::writer::Error as XmlWriterError;
 /// `Result`.
 #[derive(Debug)]
 pub enum SCError {
-	Io(IoError),
-	XmlReader(XmlReaderError),
-	XmlWriter(XmlWriterError),
-	ParseInt(ParseIntError),
-	ParseFloat(ParseFloatError),
-	ParseBool(ParseBoolError),
-	Custom(String)
+    Io(IoError),
+    XmlReader(XmlReaderError),
+    XmlWriter(XmlWriterError),
+    ParseInt(ParseIntError),
+    ParseFloat(ParseFloatError),
+    ParseBool(ParseBoolError),
+    Custom(String)
 }
 
 impl From<IoError> for SCError {
-	fn from(error: IoError) -> Self { Self::Io(error) }
+    fn from(error: IoError) -> Self { Self::Io(error) }
 }
 
 impl From<XmlReaderError> for SCError {
-	fn from(error: XmlReaderError) -> Self { Self::XmlReader(error) }
+    fn from(error: XmlReaderError) -> Self { Self::XmlReader(error) }
 }
 
 impl From<XmlWriterError> for SCError {
-	fn from(error: XmlWriterError) -> Self { Self::XmlWriter(error) }
+    fn from(error: XmlWriterError) -> Self { Self::XmlWriter(error) }
 }
 
 impl From<ParseIntError> for SCError {
-	fn from(error: ParseIntError) -> Self { Self::ParseInt(error) }
+    fn from(error: ParseIntError) -> Self { Self::ParseInt(error) }
 }
 
 impl From<ParseFloatError> for SCError {
-	fn from(error: ParseFloatError) -> Self { Self::ParseFloat(error) }
+    fn from(error: ParseFloatError) -> Self { Self::ParseFloat(error) }
 }
 
 impl From<ParseBoolError> for SCError {
-	fn from(error: ParseBoolError) -> Self { Self::ParseBool(error) }
+    fn from(error: ParseBoolError) -> Self { Self::ParseBool(error) }
 }
 
 impl From<String> for SCError {
-	fn from(error: String) -> Self { Self::Custom(error) }
+    fn from(error: String) -> Self { Self::Custom(error) }
 }
 
 impl<'a> From<&'a str> for SCError {
-	fn from(error: &'a str) -> Self { Self::Custom(error.to_owned()) }
+    fn from(error: &'a str) -> Self { Self::Custom(error.to_owned()) }
 }
