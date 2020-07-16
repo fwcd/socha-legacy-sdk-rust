@@ -1,5 +1,5 @@
 use socha_client_base::{error::SCError, util::{SCResult, HasOpponent}};
-use std::{str::FromStr, collections::HashSet, convert::TryFrom};
+use std::{str::FromStr, collections::HashSet, convert::TryFrom, ops::{Add, Sub, Neg}};
 
 // Structures
 
@@ -63,7 +63,7 @@ pub struct PieceShape {
     coordinates: HashSet<Coordinates>
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Rotation {
     None,
     Right,
@@ -71,7 +71,10 @@ pub enum Rotation {
     Left
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A point in 2D-space. The x-axis
+/// usually points to the right while
+/// the y-axis points downwards.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Coordinates {
     pub x: i32,
     pub y: i32
@@ -89,7 +92,8 @@ impl HasOpponent for Team {
 
 // Constants
 
-const PIECE_SHAPES: [PieceShape] = [
+pub const BOARD_SIZE: usize = 20;
+pub const PIECE_SHAPES: [PieceShape] = [
     PieceShape::new(&[Coordinates::new(0, 0)]),
     PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0)]),
     PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1)]),
@@ -115,6 +119,33 @@ const PIECE_SHAPES: [PieceShape] = [
 
 // Implementations
 
+impl Coordinates {
+    /// Creates new coordinates.
+    pub fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
+    }
+
+    /// Rotates these coordinates 90 degrees clockwise.
+    pub fn turn_right(self) -> Self {
+        Self::new(-self.y, self.x)
+    }
+
+    /// Rotates these coordinates 90 degrees counter-clockwise.
+    pub fn turn_left(self) -> Self {
+        Self::new(self.y, -self.x)
+    }
+
+    /// Finds the minimum with another point.
+    pub fn min(self, other: Coordinates) -> Self {
+        Self::new(self.x.min(other.x), self.y.min(other.y))
+    }
+
+    /// Finds the maximum with another point.
+    pub fn max(self, other: Coordinates) -> Self {
+        Self::new(self.x.max(other.x), self.y.max(other.y))
+    }
+}
+
 impl Piece {
     pub fn new(kind: usize, rotation: Rotation, color: Color) -> Self {
         Self { kind, rotation, color }
@@ -131,11 +162,63 @@ impl PieceShape {
     pub fn coordinates(&self) -> &HashSet<Coordinates> {
         self.coordinates
     }
+
+    /// Mirrors this shape by negating all coordinates.
+    fn mirror(&self) -> Self {
+        Self::new(self.coordinates.iter().map(|c| -c))
+    }
+
+    /// Turns this piece 90 degrees to the right.
+    fn turn_right(&self) -> Self {
+        Self::new(self.coordinates.iter().map(|c| c.turn_right()))
+    }
+
+    /// Turns this piece 90 degrees to the left.
+    fn turn_left(&self) -> Self {
+        Self::new(self.coordinates.iter().map(|c| c.turn_left()))
+    }
+
+    /// Adjusts the coordinates of this piece shape to be relative
+    /// to its minimum coords.
+    fn align(&self) -> Self {
+        let min_coords = self.coordinates.iter().fold(Coordinates::new(BOARD_SIZE, BOARD_SIZE), |(m, c)| m.min(c));
+        Self::new(self.coordinates.iter().map(|c| c - min_coords))
+    }
+
+    /// Performs a rotation of this piece shape.
+    pub fn rotate(&self, rotation: Rotation) -> Self {
+        match rotation {
+            Rotation::None => self,
+            Rotation::Mirror => mirror().align(),
+            Rotation::Right => turn_right().align(),
+            Rotation::Left => turn_left().align()
+        }
+    }
 }
 
-impl Coordinates {
-    pub fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
+// Operator overloads
+
+impl Neg for Coordinates {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Self::new(-self.x, -self.y)
+    }
+}
+
+impl Add for Coordinates {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self::new(self.x + other.x, self.y + other.y)
+    }
+}
+
+impl Sub for Coordinates {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self::new(self.x - other.x, self.y - other.y)
     }
 }
 
