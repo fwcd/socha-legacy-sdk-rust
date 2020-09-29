@@ -1,7 +1,8 @@
 # Software Challenge Rust SDK
-[Software Challenge](https://www.software-challenge.de) client framework written in Rust.
 
 [![Build Status](https://github.com/fwcd/socha-sdk-rust/workflows/CI/badge.svg)](https://github.com/fwcd/socha-sdk-rust/actions)
+
+[Software Challenge](https://www.software-challenge.de) client framework written in Rust.
 
 ![Logo](icon.png)
 
