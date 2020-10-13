@@ -345,7 +345,7 @@ mod tests {
     #[test]
     fn test_game_state() {
         let start_piece = "PENTO_Y";
-        let state = GameState::new(PIECE_SHAPES_BY_NAME[start_piece].clone());
+        let mut state = GameState::new(PIECE_SHAPES_BY_NAME[start_piece].clone());
 
         // Verify that the initial setup is correct
         assert_eq!(state.current_color(), Color::Blue);
@@ -356,38 +356,50 @@ mod tests {
         assert_eq!(state.board.count_obstructed(), 0);
         assert!(state.is_first_move());
 
-        let possible_moves: Vec<_> = state.possible_moves().collect();
-        let possible_first_moves: Vec<_> = state.possible_first_moves().collect();
+        {
+            let possible_moves: Vec<_> = state.possible_moves().collect();
+            let possible_first_moves: Vec<_> = state.possible_first_moves().collect();
 
-        assert!(!possible_moves.is_empty());
-        assert_eq!(possible_moves, possible_first_moves);
-        
-        let shapes = possible_moves.iter().cloned().map(|m|
-            match m {
-                Move::Set { piece } => piece.shape().ascii_art().to_string(),
-                _ => panic!("Skip moves should never be first!")
-            }
-        ).map(|s| s.trim().to_string()).collect::<Vec<_>>();
-        
-        assert!(shapes.contains(&"#....\n\
-                                  ##...\n\
-                                  #....\n\
-                                  #....\n\
-                                  .....".to_string()));
-        assert!(shapes.contains(&"####.\n\
-                                  ..#..\n\
-                                  .....\n\
-                                  .....\n\
-                                  .....".to_string()));
-        assert!(shapes.contains(&"####.\n\
-                                  .#...\n\
-                                  .....\n\
-                                  .....\n\
-                                  .....".to_string()));
-        assert!(shapes.contains(&"#....\n\
-                                  #....\n\
-                                  ##...\n\
-                                  #....\n\
-                                  .....".to_string()));
+            assert!(!possible_moves.is_empty());
+            assert_eq!(possible_moves, possible_first_moves);
+            
+            let shapes = possible_moves.iter().cloned().map(|m|
+                match m {
+                    Move::Set { piece } => piece.shape().ascii_art().to_string(),
+                    _ => panic!("Skip moves should never be first!")
+                }
+            ).map(|s| s.trim().to_string()).collect::<Vec<_>>();
+            
+            assert!(shapes.contains(&"#....\n\
+                                      ##...\n\
+                                      #....\n\
+                                      #....\n\
+                                      .....".to_string()));
+            assert!(shapes.contains(&"####.\n\
+                                      ..#..\n\
+                                      .....\n\
+                                      .....\n\
+                                      .....".to_string()));
+            assert!(shapes.contains(&"####.\n\
+                                      .#...\n\
+                                      .....\n\
+                                      .....\n\
+                                      .....".to_string()));
+            assert!(shapes.contains(&"#....\n\
+                                      #....\n\
+                                      ##...\n\
+                                      #....\n\
+                                      .....".to_string()));
+            
+            state.perform_move(possible_moves[0].clone()).unwrap();
+        }
+        {
+            let possible_moves: Vec<_> = state.possible_moves().collect();
+            
+            assert!(state.is_first_move());
+            assert_eq!(state.current_color(), Color::Yellow);
+            assert_eq!(state.current_team(), Team::Two);
+            assert!(!possible_moves.is_empty());
+        }
     }
 }
