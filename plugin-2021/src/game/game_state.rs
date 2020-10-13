@@ -88,7 +88,7 @@ impl GameState {
     // https://github.com/CAU-Kiel-Tech-Inf/backend/blob/97d185660754ffba4bd4444f3f39ae350f1d053e/plugin/src/shared/sc/plugin2021/util/GameRuleLogic.kt
 
     /// Computes the points from the given, undeployed piece shapes.
-    fn get_points_from_undeployed(undeployed: HashSet<PieceShape>, mono_last: bool) -> i32 {
+    pub fn get_points_from_undeployed(undeployed: HashSet<PieceShape>, mono_last: bool) -> i32 {
         // If all pieces were placed
         if undeployed.is_empty() {
             // Return sum of all squares plus 15 bonus points.
