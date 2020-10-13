@@ -45,10 +45,10 @@ pub struct GameState {
     pub last_move_mono: HashMap<Color, bool>,
     pub current_color_index: u32,
     // TODO: Accessor for color -> piece shape
-    pub blue_shapes: HashSet<PieceShape>,
-    pub yellow_shapes: HashSet<PieceShape>,
-    pub red_shapes: HashSet<PieceShape>,
-    pub green_shapes: HashSet<PieceShape>
+    pub blue_shapes: Vec<PieceShape>,
+    pub yellow_shapes: Vec<PieceShape>,
+    pub red_shapes: Vec<PieceShape>,
+    pub green_shapes: Vec<PieceShape>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,11 +69,7 @@ pub enum Move {
     /// A move that skips a round.
     Skip,
     /// A move that places an own, not yet placed piece.
-    Set {
-        piece: Piece,
-        /// The coordinates the upper left corner this piece is placed on.
-        position: Coordinates
-    }
+    Set { piece: Piece }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +89,7 @@ pub struct Piece {
 /// Represents a shape in Blokus. There are 21 different kinds of these.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PieceShape {
+    name: String,
     coordinates: HashSet<Coordinates>
 }
 
@@ -117,39 +114,47 @@ impl HasOpponent for Team {
     fn opponent(self) -> Self {
         match self {
             Self::None => Self::None,
-            Self::Red => Self::Blue,
-            Self::Blue => Self::Red
+            Self::One => Self::Two,
+            Self::Two => Self::One
         }
     }
 }
 
 // Constants
 
+pub const BOARD_SIZE: usize = 20;
+pub const PIECE_SHAPES: [PieceShape; 21] = [
+    PieceShape::new("MONO", vec![Coordinates::new(0, 0)]),
+    PieceShape::new("DOMINO", vec![Coordinates::new(0, 0), Coordinates::new(1, 0)]),
+    PieceShape::new("TRIO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+    PieceShape::new("TRIO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2)]),
+    PieceShape::new("TETRO_O", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+    PieceShape::new("TETRO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1)]),
+    PieceShape::new("TETRO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3)]),
+    PieceShape::new("TETRO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
+    PieceShape::new("TETRO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
+    PieceShape::new("PENTO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(1, 3)]),
+    PieceShape::new("PENTO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
+    PieceShape::new("PENTO_V", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+    PieceShape::new("PENTO_S", vec![Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+    PieceShape::new("PENTO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+    PieceShape::new("PENTO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
+    PieceShape::new("PENTO_P", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
+    PieceShape::new("PENTO_W", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+    PieceShape::new("PENTO_U", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+    PieceShape::new("PENTO_R", vec![Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+    PieceShape::new("PENTO_X", vec![Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
+    PieceShape::new("PENTO_Y", vec![Coordinates::new(0, 1), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(1, 3)])
+];
+
 lazy_static! {
-    pub static ref BOARD_SIZE: usize = 20;
-    pub static ref PIECE_SHAPES: HashMap<String, PieceShape> = hashmap![
-        "MONO"    => PieceShape::new(&[Coordinates::new(0, 0)]),
-        "DOMINO"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0)]),
-        "TRIO_L"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-        "TRIO_I"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2)]),
-        "TETRO_O" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-        "TETRO_T" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1)]),
-        "TETRO_I" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3)]),
-        "TETRO_L" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
-        "TETRO_Z" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
-        "PENTO_L" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(1, 3)]),
-        "PENTO_T" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
-        "PENTO_V" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-        "PENTO_S" => PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-        "PENTO_Z" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-        "PENTO_I" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
-        "PENTO_P" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
-        "PENTO_W" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-        "PENTO_U" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
-        "PENTO_R" => PieceShape::new(&[Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
-        "PENTO_X" => PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
-        "PENTO_Y" => PieceShape::new(&[Coordinates::new(0, 1), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(1, 3)])
-    ];
+    pub static ref PIECE_SHAPES_BY_NAME: HashMap<String, PieceShape> = {
+        let mut m = HashMap::new();
+        for piece in PIECE_SHAPES.iter() {
+            m.insert(piece.name, piece);
+        }
+        m
+    };
 }
 
 // Implementations
@@ -181,49 +186,47 @@ impl Coordinates {
     }
 }
 
-impl Piece {
-    pub fn new(kind: usize, rotation: Rotation, color: Color) -> Self {
-        Self { kind, rotation, color }
-    }
-}
-
 impl PieceShape {
-    fn new(coordinates: impl IntoIterator<Item=Coordinates>) -> Self {
-        Self { coordinates: coordinates.into_iter().collect() }
+    fn new(name: &str, coordinates: impl IntoIterator<Item=Coordinates>) -> Self {
+        Self { name: name.to_owned(), coordinates: coordinates.into_iter().collect() }
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
     }
 
     /// A list of occupied fields, with the upper left corner being
     /// the origin (0, 0), the x-axis pointed right and the y-axis pointed downwards
     pub fn coordinates(&self) -> &HashSet<Coordinates> {
-        self.coordinates
+        &self.coordinates
     }
 
     /// Mirrors this shape by negating all coordinates.
     fn mirror(&self) -> Self {
-        Self::new(self.coordinates.iter().map(|c| -c))
+        Self::new(self.name(), self.coordinates.iter().map(|&c| -c))
     }
 
     /// Turns this piece 90 degrees to the right.
     fn turn_right(&self) -> Self {
-        Self::new(self.coordinates.iter().map(|c| c.turn_right()))
+        Self::new(self.name(), self.coordinates.iter().map(|c| c.turn_right()))
     }
 
     /// Turns this piece 90 degrees to the left.
     fn turn_left(&self) -> Self {
-        Self::new(self.coordinates.iter().map(|c| c.turn_left()))
+        Self::new(self.name(), self.coordinates.iter().map(|c| c.turn_left()))
     }
 
     /// Adjusts the coordinates of this piece shape to be relative
     /// to its minimum coords.
     fn align(&self) -> Self {
-        let min_coords = self.coordinates.iter().fold(Coordinates::new(BOARD_SIZE, BOARD_SIZE), |(m, c)| m.min(c));
-        Self::new(self.coordinates.iter().map(|c| c - min_coords))
+        let min_coords = self.coordinates.iter().fold(Coordinates::new(BOARD_SIZE as i32, BOARD_SIZE as i32), |m, &c| m.min(c));
+        Self::new(self.name(), self.coordinates.iter().map(|&c| c - min_coords))
     }
 
     /// Performs a rotation of this piece shape.
     pub fn rotate(&self, rotation: Rotation) -> Self {
         match rotation {
-            Rotation::None => self,
+            Rotation::None => self.clone(),
             Rotation::Mirror => self.mirror().align(),
             Rotation::Right => self.turn_right().align(),
             Rotation::Left => self.turn_left().align()
@@ -287,10 +290,10 @@ impl FromStr for Color {
 
     fn from_str(raw: &str) -> SCResult<Self> {
         match raw.to_uppercase().as_str() {
-            "BLUE" => Ok(Color::Blue),
-            "YELLOW" => Ok(Color::Yellow),
-            "RED" => Ok(Color::Red),
-            "GREEN" => Ok(Color::Green),
+            "BLUE" => Ok(Self::Blue),
+            "YELLOW" => Ok(Self::Yellow),
+            "RED" => Ok(Self::Red),
+            "GREEN" => Ok(Self::Green),
             _ => Err(format!("Color not parse color {}", raw).into())
         }
     }
@@ -299,10 +302,11 @@ impl FromStr for Color {
 impl fmt::Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Team::Blue => write!(f, "BLUE"),
-            Team::Yellow => write!(f, "YELLOW"),
-            Team::Red => write!(f, "RED"),
-            Team::Green => write!(f, "GREEN")
+            Self::Blue => write!(f, "BLUE"),
+            Self::Yellow => write!(f, "YELLOW"),
+            Self::Red => write!(f, "RED"),
+            Self::Green => write!(f, "GREEN"),
+            Self::None => write!(f, "NONE")
         }
     }
 }
@@ -336,7 +340,7 @@ impl FromStr for PieceShape {
     type Err = SCError;
 
     fn from_str(raw: &str) -> SCResult<Self> {
-        PIECE_SHAPES.get(raw).ok_or_else(|| format!("Could not parse shape {}", raw).into())
+        Ok(PIECE_SHAPES_BY_NAME.get(raw).ok_or_else(|| format!("Could not parse shape {}", raw))?.clone())
     }
 }
 
@@ -353,7 +357,7 @@ impl FromXmlNode for GameState {
             start_piece: node.attribute("startPiece")?.parse()?,
             start_color: Color::from_node(node.child_by_name("startColor")?)?,
             start_team: Team::from_node(node.child_by_name("startTeam")?)?,
-            ordered_colors: node.child_by_name("orderedColors")?.childs_by_name("color").map(Color::from_node),
+            ordered_colors: node.child_by_name("orderedColors")?.childs_by_name("color").map(Color::from_node).collect::<Result<_, _>>()?,
             last_move_mono: HashMap::new(), // TODO
             current_color_index: node.attribute("currentColorIndex")?.parse()?,
             blue_shapes: node.child_by_name("blueShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
@@ -368,14 +372,6 @@ impl FromXmlNode for Board {
     fn from_node(node: &XmlNode) -> SCResult<Self> {
         Ok(Self {
             fields: node.childs_by_name("field").map(Field::from_node).collect::<Result<_, _>>()?
-        })
-    }
-}
-
-impl FromXmlNode for Move {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self {
-            
         })
     }
 }
@@ -435,5 +431,34 @@ impl FromXmlNode for Player {
             team: Team::from_node(node.child_by_name("color")?)?,
             display_name: node.attribute("displayName")?
         })
+    }
+}
+
+impl From<Move> for XmlNode {
+    fn from(game_move: Move) -> Self {
+        match game_move {
+            Move::Set { piece } => XmlNode::new("data")
+                .attribute("class", "sc.plugin2021.SetMove")
+                .child(piece)
+                .build(),
+            Move::Skip => XmlNode::new("data")
+                .attribute("class", "sc.plugin2021.SkipMove")
+                .build()
+        }
+    }
+}
+
+impl From<Piece> for XmlNode {
+    fn from(piece: Piece) -> Self {
+        XmlNode::new("piece")
+            .attribute("color", piece.color.to_string())
+            .attribute("kind", piece.kind.to_string())
+            .attribute("rotation", piece.rotation.to_string())
+            .attribute("is_flipped", piece.is_flipped.to_string())
+            .child(XmlNode::new("position")
+                .attribute("x", piece.position.x.to_string())
+                .attribute("y", piece.position.y.to_string())
+                .build())
+            .build()
     }
 }
