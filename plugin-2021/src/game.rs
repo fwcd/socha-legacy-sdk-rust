@@ -65,17 +65,29 @@ pub struct Field {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Move {
-    pub piece: Piece,
-    /// The coordinates the upper left corner this piece is placed on.
-    pub position: Coordinates
+pub enum Move {
+    /// A move that skips a round.
+    Skip,
+    /// A move that places an own, not yet placed piece.
+    Set {
+        piece: Piece,
+        /// The coordinates the upper left corner this piece is placed on.
+        position: Coordinates
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
-    pub kind: usize,
+    /// The piece's shape
+    pub kind: PieceShape,
+    /// How far the piece has been rotated
     pub rotation: Rotation,
-    pub color: Color
+    /// Whether the piece has been mirrored along the y-axis
+    pub is_flipped: bool,
+    /// The piece's color
+    pub color: Color,
+    /// The top left corner of the piece's rectangular bounding box
+    pub position: Coordinates
 }
 
 /// Represents a shape in Blokus. There are 21 different kinds of these.
@@ -356,6 +368,35 @@ impl FromXmlNode for Board {
     fn from_node(node: &XmlNode) -> SCResult<Self> {
         Ok(Self {
             fields: node.childs_by_name("field").map(Field::from_node).collect::<Result<_, _>>()?
+        })
+    }
+}
+
+impl FromXmlNode for Move {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            
+        })
+    }
+}
+
+impl FromXmlNode for Piece {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            color: node.attribute("color")?.parse()?,
+            kind: node.attribute("kind")?.parse()?,
+            rotation: node.attribute("rotation")?.parse()?,
+            is_flipped: node.attribute("isFlipped")?.parse()?,
+            position: Coordinates::from_node(node.child_by_name("position")?)
+        })
+    }
+}
+
+impl FromXmlNode for Coordinates {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            x: node.attribute("x")?.parse()?,
+            y: node.attribute("y")?.parse()?
         })
     }
 }
