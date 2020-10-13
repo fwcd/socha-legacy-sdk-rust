@@ -17,6 +17,11 @@ impl Board {
         Self { fields: Vec::new() }
     }
 
+    /// Fetches the number of occupied fields.
+    pub fn count_obstructed(&self) -> usize {
+        self.fields.iter().filter(|f| f.content != Color::None).count()
+    }
+
     /// Checks whether the given coordinates are in the board's bounds.
     pub fn is_in_bounds(coordinates: Vec2) -> bool {
            coordinates.x >= 0

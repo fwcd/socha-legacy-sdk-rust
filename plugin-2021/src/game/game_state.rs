@@ -43,6 +43,28 @@ pub struct GameState {
 const SUM_MAX_SQUARES: i32 = 89;
 
 impl GameState {
+    /// Creates a brand-new game state with blue as the starting color
+    /// and team one as the starting team. Mostly for debugging purposes.
+    pub fn new(start_piece: PieceShape) -> Self {
+        GameState {
+            turn: 0,
+            round: 1,
+            first: Player { team: Team::One, display_name: "Alice".to_owned() },
+            second: Player { team: Team::Two, display_name: "Bob".to_owned() },
+            board: Board::new(),
+            start_piece,
+            start_color: Color::Blue,
+            start_team: Team::One,
+            ordered_colors: vec![Color::Blue, Color::Yellow, Color::Red, Color::Green],
+            last_move_mono: HashMap::new(),
+            current_color_index: 0,
+            blue_shapes: PIECE_SHAPES.iter().cloned().collect(),
+            yellow_shapes: PIECE_SHAPES.iter().cloned().collect(),
+            red_shapes: PIECE_SHAPES.iter().cloned().collect(),
+            green_shapes: PIECE_SHAPES.iter().cloned().collect()
+        }
+    }
+
     /// Fetches the current color.
     pub fn current_color(&self) -> Color {
         self.ordered_colors[self.current_color_index as usize]
@@ -311,5 +333,35 @@ impl FromXmlNode for GameState {
             red_shapes: node.child_by_name("redShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
             green_shapes: node.child_by_name("greenShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::game::{Color, Team, PIECE_SHAPES_BY_NAME};
+
+    use super::GameState;
+
+    #[test]
+    fn test_game_state() {
+        let start_piece = "TRIO_L";
+        let mut state = GameState::new(PIECE_SHAPES_BY_NAME[start_piece].clone());
+
+        // Verify that the initial setup is correct
+        assert_eq!(state.current_color(), Color::Blue);
+        assert_eq!(state.current_team(), Team::One);
+        assert_eq!(state.start_color, state.current_color());
+        assert_eq!(state.start_team, state.current_team());
+        assert_eq!(state.ordered_colors[state.current_color_index as usize], state.current_color());
+        assert_eq!(state.board.count_obstructed(), 0);
+        assert!(state.is_first_move());
+
+        let possible_moves: Vec<_> = state.possible_moves().collect();
+        let possible_first_moves: Vec<_> = state.possible_first_moves().collect();
+
+        assert!(!possible_moves.is_empty());
+        assert_eq!(possible_moves, possible_first_moves);
+        
+        // panic!("{:#?}", possible_moves);
     }
 }
