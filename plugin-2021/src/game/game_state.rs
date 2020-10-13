@@ -15,15 +15,36 @@ pub struct GameState {
     pub start_piece: PieceShape,
     pub start_color: Color,
     pub start_team: Team,
-    // TODO: Current team accessor
     pub ordered_colors: Vec<Color>,
     pub last_move_mono: HashMap<Color, bool>,
     pub current_color_index: u32,
-    // TODO: Accessor for color -> piece shape
     pub blue_shapes: Vec<PieceShape>,
     pub yellow_shapes: Vec<PieceShape>,
     pub red_shapes: Vec<PieceShape>,
     pub green_shapes: Vec<PieceShape>
+}
+
+impl GameState {
+    /// Fetches the current color.
+    pub fn current_color(&self) -> Color {
+        self.ordered_colors[self.current_color_index as usize]
+    }
+
+    /// Fetches the current team.
+    pub fn current_team(&self) -> Team {
+        self.current_color().team()
+    }
+
+    /// Fetches the undeployed piece shapes of a given color.
+    pub fn shapes_of_color(&self, color: Color) -> impl Iterator<Item=&PieceShape> {
+        match color {
+            Color::Red => self.red_shapes.iter(),
+            Color::Yellow => self.yellow_shapes.iter(),
+            Color::Green => self.green_shapes.iter(),
+            Color::Blue => self.blue_shapes.iter(),
+            Color::None => panic!("Cannot fetch shapes of color 'none'!")
+        }
+    }
 }
 
 impl FromXmlNode for GameState {
