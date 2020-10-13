@@ -169,38 +169,38 @@ impl PieceShape {
 
     /// Mirrors this shape by negating all coordinates.
     fn mirror(&self) -> Self {
-        Self::new(self.name(), self.coordinates().map(|c| -c))
+        Self::new(self.name(), Self::align(self.coordinates().map(|c| -c).collect()))
     }
 
     /// Turns this piece 90 degrees to the right.
     fn turn_right(&self) -> Self {
-        Self::new(self.name(), self.coordinates().map(|c| c.turn_right()))
+        Self::new(self.name(), Self::align(self.coordinates().map(|c| c.turn_right()).collect()))
     }
 
     /// Turns this piece 90 degrees to the left.
     fn turn_left(&self) -> Self {
-        Self::new(self.name(), self.coordinates().map(|c| c.turn_left()))
+        Self::new(self.name(), Self::align(self.coordinates().map(|c| c.turn_left()).collect()))
     }
 
     /// Flips this piece along the y-axis.
     pub fn flip(&self) -> Self {
-        Self::new(self.name(), self.coordinates().map(|c| c.flip()))
+        Self::new(self.name(), Self::align(self.coordinates().map(|c| c.flip()).collect()))
     }
 
     /// Adjusts the coordinates of this piece shape to be relative
     /// to its minimum coords.
-    fn align(&self) -> Self {
-        let min_coords = self.coordinates().fold(Vec2::new(BOARD_SIZE as i32, BOARD_SIZE as i32), |m, c| m.min(c));
-        Self::new(self.name(), self.coordinates().map(|c| c - min_coords))
+    fn align(coordinates: Vec<Vec2>) -> impl Iterator<Item=Vec2> {
+        let min_coords = coordinates.iter().fold(Vec2::new(BOARD_SIZE as i32, BOARD_SIZE as i32), |m, &c| m.min(c));
+        coordinates.into_iter().map(move |c| c - min_coords)
     }
 
     /// Performs a rotation of this piece shape.
     pub fn rotate(&self, rotation: Rotation) -> Self {
         match rotation {
             Rotation::None => self.clone(),
-            Rotation::Mirror => self.mirror().align(),
-            Rotation::Right => self.turn_right().align(),
-            Rotation::Left => self.turn_left().align()
+            Rotation::Mirror => self.mirror(),
+            Rotation::Right => self.turn_right(),
+            Rotation::Left => self.turn_left()
         }
     }
 
@@ -210,7 +210,7 @@ impl PieceShape {
         if flip {
             p = p.flip();
         }
-        p.align()
+        p
     }
 
     /// Fetches the possible rotation/flip-combinations
