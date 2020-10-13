@@ -45,15 +45,17 @@ const MAX_SIDE_LENGTH: i32 = 5;
 /// Since every piece shape is less than 5x5 is size, we can represent it
 /// using a 5x5 bit-matrix:
 ///
-///     +---+---+---+---+----+
-///     | 0 | 1 | 2 | 3 |  4 |
-///     +---+---+---+---+----+
-///     | 5 | 6 |            |
-///     +---+---+    ...     |
-///     |                    |
-///     +               +----+
-///     |               | 24 |
-///     +---+---+---+---+----+
+/// ```text
+///  +---+---+---+---+----+
+///  | 0 | 1 | 2 | 3 |  4 |
+///  +---+---+---+---+----+
+///  | 5 | 6 |            |
+///  +---+---+    ...     |
+///  |                    |
+///  +               +----+
+///  |               | 24 |
+///  +---+---+---+---+----+
+/// ```
 ///
 /// These bits are stored in the right-end of of a 32-bit integer.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
