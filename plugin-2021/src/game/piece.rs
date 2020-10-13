@@ -5,7 +5,7 @@ use super::{Color, Coordinates, PieceShape, Rotation};
 /// A game piece with color, position and transformed form.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
-    /// The piece's shape
+    /// The piece's untransformed shape
     pub kind: PieceShape,
     /// How far the piece has been rotated
     pub rotation: Rotation,
@@ -15,6 +15,23 @@ pub struct Piece {
     pub color: Color,
     /// The top left corner of the piece's rectangular bounding box
     pub position: Coordinates
+}
+
+impl Piece {
+    /// Fetches the piece's actual (transformed) shape
+    pub fn shape(&self) -> PieceShape {
+        let mut shape = self.kind.rotate(self.rotation);
+        if self.is_flipped {
+            shape = shape.flip();
+        }
+        shape
+    }
+
+    /// Fetches the piece's actual coordinates.
+    pub fn coordinates(&self) -> impl Iterator<Item=Coordinates> {
+        let position = self.position;
+        self.shape().coordinates().map(move |c| c + position)
+    }
 }
 
 impl FromXmlNode for Piece {
