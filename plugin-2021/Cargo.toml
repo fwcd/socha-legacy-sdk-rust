@@ -1,5 +1,5 @@
 [package]
-name = "plugin-2021"
+name = "socha-plugin-2021"
 version = "0.1.0"
 authors = ["fwcd"]
 edition = "2018"
