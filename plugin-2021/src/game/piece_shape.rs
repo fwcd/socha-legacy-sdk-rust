@@ -153,6 +153,11 @@ impl PieceShape {
         self.name.as_str()
     }
 
+    /// Checks whether the piece shape contains the provided (normalized) coordinate pair.
+    pub fn contains(&self, coordinates: Coordinates) -> bool {
+        self.coordinates.contains(coordinates)
+    }
+
     /// A list of occupied fields, with the upper left corner being
     /// the origin (0, 0), the x-axis pointed right and the y-axis pointed downwards
     pub fn coordinates(&self) -> impl Iterator<Item=Coordinates> {
