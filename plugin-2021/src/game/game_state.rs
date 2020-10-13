@@ -214,9 +214,12 @@ impl GameState {
     }
 
     /// Performs the given skip move
-    fn perform_skip_move(&self) -> SCResult<()> {
-        // TODO
+    fn perform_skip_move(&mut self) -> SCResult<()> {
+        if self.is_first_move() {
+            return Err("Cannot skip the first round!".into());
+        }
 
+        self.try_advance(1)?;
         Ok(())
     }
 }
