@@ -1,6 +1,6 @@
 [workspace]
 members = [
-	"client-base",
-	"plugin-2020",
+    "client-base",
+    "plugin-2020",
     "plugin-2021"
 ]
