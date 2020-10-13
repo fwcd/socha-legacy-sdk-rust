@@ -27,6 +27,11 @@ impl Coordinates {
         Self::new(self.y, -self.x)
     }
 
+    /// Flips the coordinates along the y-axis.
+    pub fn flip(self) -> Self {
+        Self::new(-self.x, self.y)
+    }
+
     /// Finds the minimum with another point.
     pub fn min(self, other: Coordinates) -> Self {
         Self::new(self.x.min(other.x), self.y.min(other.y))

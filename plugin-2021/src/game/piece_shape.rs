@@ -180,6 +180,11 @@ impl PieceShape {
         Self::new(self.name(), self.coordinates().map(|c| c.turn_left()))
     }
 
+    /// Flips this piece along the y-axis.
+    pub fn flip(&self) -> Self {
+        Self::new(self.name(), self.coordinates().map(|c| c.flip()))
+    }
+
     /// Adjusts the coordinates of this piece shape to be relative
     /// to its minimum coords.
     fn align(&self) -> Self {
