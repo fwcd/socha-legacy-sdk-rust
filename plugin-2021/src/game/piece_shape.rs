@@ -139,18 +139,19 @@ impl IntoIterator for CoordinateSet {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PieceShape {
     /// The shape's internal name.
-    name: String,
+    name: &'static str,
     /// The normalized coordinates that make up the shape.
     coordinates: CoordinateSet
 }
 
 impl PieceShape {
-    fn new(name: &str, coordinates: impl IntoIterator<Item=Coordinates>) -> Self {
-        Self { name: name.to_owned(), coordinates: CoordinateSet::from(coordinates.into_iter()) }
+    fn new(name: &'static str, coordinates: impl IntoIterator<Item=Coordinates>) -> Self {
+        Self { name: name, coordinates: CoordinateSet::from(coordinates.into_iter()) }
     }
 
-    pub fn name(&self) -> &str {
-        self.name.as_str()
+    /// The piece's (internal) name.
+    pub fn name(&self) -> &'static str {
+        self.name
     }
 
     /// Checks whether the piece shape contains the provided (normalized) coordinate pair.
