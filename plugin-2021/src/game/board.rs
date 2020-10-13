@@ -1,14 +1,8 @@
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Color, Coordinates, Field, Piece};
+use super::{CORNERS, Color, Vec2, Corner, Field, Piece};
 
 pub const BOARD_SIZE: usize = 20;
-const BOARD_CORNERS: [Coordinates; 4] = [
-    Coordinates { x: 0, y: 0 },
-    Coordinates { x: 0, y: BOARD_SIZE as i32 - 1 },
-    Coordinates { x: BOARD_SIZE as i32 - 1, y: 0 },
-    Coordinates { x: BOARD_SIZE as i32 - 1, y: BOARD_SIZE as i32 - 1 }
-];
 
 /// The game board is a 20x20 grid of fields with colors.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,14 +17,8 @@ impl Board {
         Self { fields: Vec::new() }
     }
 
-    // Note that the following bound checking methods
-    // do not depend on the self-instance, but are declared
-    // as instance methods anyways. This is intentional to
-    // have code depend as little as possible on the constness
-    // of the the board size.
-
     /// Checks whether the given coordinates are in the board's bounds.
-    pub fn is_in_bounds(&self, coordinates: Coordinates) -> bool {
+    pub fn is_in_bounds(coordinates: Vec2) -> bool {
            coordinates.x >= 0
         && coordinates.y >= 0
         && coordinates.x < BOARD_SIZE as i32
@@ -38,23 +26,44 @@ impl Board {
     }
 
     /// Fetches the board's corners.
-    pub fn corners(&self) -> impl Iterator<Item=Coordinates> {
-        BOARD_CORNERS.iter().cloned()
+    pub fn corner_positions() -> impl Iterator<Item=Vec2> {
+        CORNERS.iter().map(|&c| Self::corner_position(c)).collect::<Vec<_>>().into_iter()
+    }
+
+    /// Fetches the position of a corner.
+    pub fn corner_position(corner: Corner) -> Vec2 {
+        match corner {
+            Corner::TopLeft => Vec2::new(0, 0),
+            Corner::BottomLeft => Vec2::new(0, BOARD_SIZE as i32 - 1),
+            Corner::TopRight => Vec2::new(BOARD_SIZE as i32 - 1, 0),
+            Corner::BottomRight => Vec2::new(BOARD_SIZE as i32 - 1, BOARD_SIZE as i32 - 1)
+        }
+    }
+
+    /// Aligns a position to a corner.
+    pub fn align(area: Vec2, corner: Corner) -> Vec2 {
+        let position = Self::corner_position(corner);
+        match corner {
+            Corner::TopLeft => position,
+            Corner::TopRight => position - area,
+            Corner::BottomLeft => Vec2::new(position.x - area.x, position.y),
+            Corner::BottomRight => Vec2::new(position.x, position.y - area.y)
+        }
     }
 
     /// Checks whether a coordinate is on a corner.
-    pub fn is_on_corner(&self, position: Coordinates) -> bool {
-        BOARD_CORNERS.contains(&position)
+    pub fn is_on_corner(position: Vec2) -> bool {
+        Self::corner_positions().any(|p| p == position)
     }
 
     /// Fetches the color at the given position.
-    pub fn get(&self, position: Coordinates) -> Color {
+    pub fn get(&self, position: Vec2) -> Color {
         // TODO: This is very inefficient and would be much better handled using a matrix
         self.fields.iter().find(|f| f.position == position).map(|f| f.content).unwrap_or_default()
     }
 
     /// Places the color at the given position.
-    pub fn set(&mut self, position: Coordinates, color: Color) {
+    pub fn set(&mut self, position: Vec2, color: Color) {
         // TODO: This is very inefficient and would be much better handled using a matrix
         match self.fields.iter_mut().find(|f| f.position == position) {
             Some(field) => field.content = color,
@@ -70,27 +79,27 @@ impl Board {
     }
 
     /// Checks whether the given position is obstructed.
-    pub fn is_obstructed(&self, position: Coordinates) -> bool {
+    pub fn is_obstructed(&self, position: Vec2) -> bool {
         self.fields.iter().any(|f| f.position == position && f.content != Color::None)
     }
 
     /// Checks whether the position touches another border of same color.
-    pub fn borders_on_color(&self, position: Coordinates, color: Color) -> bool {
+    pub fn borders_on_color(&self, position: Vec2, color: Color) -> bool {
         [
-            Coordinates::new(1, 0),
-            Coordinates::new(0, 1),
-            Coordinates::new(-1, 0),
-            Coordinates::new(0, -1)
+            Vec2::new(1, 0),
+            Vec2::new(0, 1),
+            Vec2::new(-1, 0),
+            Vec2::new(0, -1)
         ].iter().any(|&o| self.get(position + o) == color)
     }
 
     /// Checks whether the position touches another corner of same color.
-    pub fn corners_on_color(&self, position: Coordinates, color: Color) -> bool {
+    pub fn corners_on_color(&self, position: Vec2, color: Color) -> bool {
         [
-            Coordinates::new(1, 1),
-            Coordinates::new(1, 1),
-            Coordinates::new(-1, 1),
-            Coordinates::new(1, -1)
+            Vec2::new(1, 1),
+            Vec2::new(1, 1),
+            Vec2::new(-1, 1),
+            Vec2::new(1, -1)
         ].iter().any(|&o| self.get(position + o) == color)
     }
 }

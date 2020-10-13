@@ -1,6 +1,6 @@
 use socha_client_base::{util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
 
-use super::{Color, Coordinates, PieceShape, Rotation};
+use super::{Color, Vec2, PieceShape, Rotation};
 
 /// A game piece with color, position and transformed form.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,7 +14,7 @@ pub struct Piece {
     /// The piece's color
     pub color: Color,
     /// The top left corner of the piece's rectangular bounding box
-    pub position: Coordinates
+    pub position: Vec2
 }
 
 impl Piece {
@@ -24,7 +24,7 @@ impl Piece {
     }
 
     /// Fetches the piece's actual coordinates.
-    pub fn coordinates(&self) -> impl Iterator<Item=Coordinates> {
+    pub fn coordinates(&self) -> impl Iterator<Item=Vec2> {
         let position = self.position;
         self.shape().coordinates().map(move |c| c + position)
     }
@@ -37,7 +37,7 @@ impl FromXmlNode for Piece {
             kind: node.attribute("kind")?.parse()?,
             rotation: node.attribute("rotation")?.parse()?,
             is_flipped: node.attribute("isFlipped")?.parse()?,
-            position: Coordinates::from_node(node.child_by_name("position")?)?
+            position: Vec2::from_node(node.child_by_name("position")?)?
         })
     }
 }

@@ -151,7 +151,7 @@ impl GameState {
         self.validate_shape(&piece.shape(), piece.color)?;
 
         for coordinates in piece.coordinates() {
-            if !self.board.is_in_bounds(coordinates) {
+            if !Board::is_in_bounds(coordinates) {
                 return Err(format!("Target position of the set move {} is not in the board's bounds!", coordinates).into());
             }
 
@@ -166,7 +166,7 @@ impl GameState {
 
         if self.is_first_move() {
             // Check whether it is placed correctly in a corner
-            if !piece.coordinates().any(|p| self.board.is_on_corner(p)) {
+            if !piece.coordinates().any(|p| Board::is_on_corner(p)) {
                 return Err("The piece from the set move is not located in a corner!".into());
             }
         } else {
@@ -222,6 +222,33 @@ impl GameState {
         self.try_advance(1)?;
         Ok(())
     }
+
+    /// Fetches the possible moves
+    fn possible_moves(&self) -> impl Iterator<Item=Move> {
+        // TODO: Skip moves?
+        self.possible_set_moves()
+    }
+
+    /// Fetches the possible set moves
+    fn possible_set_moves(&self) -> impl Iterator<Item=Move> {
+        // TODO
+        vec![].into_iter()
+    }
+
+    /// Fetches the possible non-start moves
+    fn possible_usual_set_moves(&self) -> impl Iterator<Item=Move> {
+        // TODO
+        vec![].into_iter()
+    }
+
+    // /// Fetches the possible start moves
+    // fn possible_start_set_moves(&self) -> impl Iterator<Item=Move> {
+    //     let kind = self.start_piece;
+    //     kind
+    //         .transformations()
+    //         .flat_map(|(rotation, is_flipped)| Board::corner_positions()
+    //             .map(|corner| Move::Set { piece: Piece { kind, rotation, is_flipped, color, position } }))
+    // }
 }
 
 impl FromXmlNode for GameState {

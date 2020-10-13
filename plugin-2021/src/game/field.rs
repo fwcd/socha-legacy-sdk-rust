@@ -1,18 +1,18 @@
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Color, Coordinates};
+use super::{Color, Vec2};
 
 /// A field on the board holding a color.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
-    pub position: Coordinates,
+    pub position: Vec2,
     pub content: Color
 }
 
 impl FromXmlNode for Field {
     fn from_node(node: &XmlNode) -> SCResult<Self> {
         Ok(Self {
-            position: Coordinates::new(
+            position: Vec2::new(
                 node.attribute("x")?.parse()?,
                 node.attribute("y")?.parse()?
             ),

@@ -1,6 +1,6 @@
 mod board;
 mod color;
-mod coordinates;
+mod corner;
 mod field;
 mod game_state;
 mod r#move;
@@ -9,10 +9,11 @@ mod piece;
 mod player;
 mod rotation;
 mod team;
+mod vec2;
 
 pub use board::*;
 pub use color::*;
-pub use coordinates::*;
+pub use corner::*;
 pub use field::*;
 pub use game_state::*;
 pub use r#move::*;
@@ -21,3 +22,4 @@ pub use piece::*;
 pub use player::*;
 pub use rotation::*;
 pub use team::*;
+pub use vec2::*;
