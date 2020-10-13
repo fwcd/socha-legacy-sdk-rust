@@ -5,5 +5,5 @@ authors = ["fwcd"]
 edition = "2018"
 
 [dependencies]
-log = "0.4.8"
-xml-rs = "0.8.0"
+log = "0.4"
+xml-rs = "0.8"

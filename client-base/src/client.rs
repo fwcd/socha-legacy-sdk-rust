@@ -140,7 +140,7 @@ impl<D> SCClient<D> where D: SCClientDelegate {
                                     data: Data::Move(new_move)
                                 })?;
 
-                                debug!("Sending move {:?}", move_node);
+                                debug!("Sending move {}", move_node);
                                 move_node.write_to(&mut xml_writer)?;
                                 xml_writer.inner_mut().flush()?;
                             } else {
