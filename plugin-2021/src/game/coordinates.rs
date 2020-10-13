@@ -1,4 +1,4 @@
-use std::ops::{Add, Neg, Sub};
+use std::{fmt, ops::{Add, Neg, Sub}};
 
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
@@ -40,6 +40,12 @@ impl Coordinates {
     /// Finds the maximum with another point.
     pub fn max(self, other: Coordinates) -> Self {
         Self::new(self.x.max(other.x), self.y.max(other.y))
+    }
+}
+
+impl fmt::Display for Coordinates {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }
 
