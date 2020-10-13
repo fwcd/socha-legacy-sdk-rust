@@ -1,5 +1,6 @@
-use socha_client_base::{error::SCError, util::{SCResult, HasOpponent}};
-use std::{str::FromStr, collections::HashSet, convert::TryFrom, ops::{Add, Sub, Neg}};
+use socha_client_base::{error::SCError, hashmap, util::{SCResult, HasOpponent}, xml_node::FromXmlNode, xml_node::XmlNode};
+use std::{collections::{HashSet, HashMap}, convert::TryFrom, fmt, ops::{Add, Sub, Neg}, str::FromStr};
+use lazy_static::lazy_static;
 
 // Structures
 
@@ -32,10 +33,19 @@ pub struct Player {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameState {
     pub turn: u32,
-    pub red_player: Player,
-    pub blue_player: Player,
+    pub round: u32,
+    pub first: Player,
+    pub second: Player,
     pub board: Board,
-    pub current_team: Team
+    pub start_piece: PieceShape,
+    pub start_team: Team,
+    pub current_team: Team,
+    pub ordered_colors: Vec<Color>,
+    current_color_index: u32,
+    blue_shapes: HashSet<PieceShape>,
+    yellow_shapes: HashSet<PieceShape>,
+    red_shapes: HashSet<PieceShape>,
+    green_shapes: HashSet<PieceShape>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -92,30 +102,32 @@ impl HasOpponent for Team {
 
 // Constants
 
-pub const BOARD_SIZE: usize = 20;
-pub const PIECE_SHAPES: [PieceShape; 21] = [
-    PieceShape::new(&[Coordinates::new(0, 0)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0)]),
-    PieceShape::new(&[Coordinates::new(2, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(3, 1)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new(&[Coordinates::new(2, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(0, 2)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
-    PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
-    PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(3, 1)])
-];
+lazy_static! {
+    pub static ref BOARD_SIZE: usize = 20;
+    pub static ref PIECE_SHAPES: HashMap<String, PieceShape> = hashmap![
+        "MONO"    => PieceShape::new(&[Coordinates::new(0, 0)]),
+        "DOMINO"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0)]),
+        "TRIO_L"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        "TRIO_I"  => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2)]),
+        "TETRO_O" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        "TETRO_T" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1)]),
+        "TETRO_I" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3)]),
+        "TETRO_L" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
+        "TETRO_Z" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
+        "PENTO_L" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(1, 3)]),
+        "PENTO_T" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
+        "PENTO_V" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        "PENTO_S" => PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        "PENTO_Z" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        "PENTO_I" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
+        "PENTO_P" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
+        "PENTO_W" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        "PENTO_U" => PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+        "PENTO_R" => PieceShape::new(&[Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+        "PENTO_X" => PieceShape::new(&[Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
+        "PENTO_Y" => PieceShape::new(&[Coordinates::new(0, 1), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(1, 3)])
+    ];
+}
 
 // Implementations
 
@@ -237,12 +249,37 @@ impl FromStr for Team {
     }
 }
 
-impl From<Team> for String {
-    fn from(team: Team) -> Self {
-        match team {
-            Team::None => "NONE",
-            Team::One => "ONE",
-            Team::Two => "TWO"
+impl fmt::Display for Team {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Team::None => write!(f, "NONE"),
+            Team::One => write!(f, "ONE"),
+            Team::Two => write!(f, "TWO")
+        }
+    }
+}
+
+impl FromStr for Color {
+    type Err = SCError;
+
+    fn from_str(raw: &str) -> SCResult<Self> {
+        match raw.to_uppercase().as_str() {
+            "BLUE" => Ok(Color::Blue),
+            "YELLOW" => Ok(Color::Yellow),
+            "RED" => Ok(Color::Red),
+            "GREEN" => Ok(Color::Green),
+            _ => Err(format!("Color not parse color {}", raw).into())
+        }
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Team::Blue => write!(f, "BLUE"),
+            Team::Yellow => write!(f, "YELLOW"),
+            Team::Red => write!(f, "RED"),
+            Team::Green => write!(f, "GREEN")
         }
     }
 }
@@ -272,14 +309,45 @@ impl From<Rotation> for i32 {
     }
 }
 
-impl TryFrom<usize> for PieceShape {
-    type Error = SCError;
+impl FromStr for PieceShape {
+    type Err = SCError;
 
-    fn try_from(kind: usize) -> SCResult<Self> {
-        if kind >= 0 && kind < PIECE_SHAPES.len() {
-            Ok(PIECE_SHAPES[kind])
-        } else {
-            Err(format!("Could not parse kind {} as piece shape", kind).into())
-        }
+    fn from_str(raw: &str) -> SCResult<Self> {
+        PIECE_SHAPES.get(raw).ok_or_else(|| format!("Could not parse shape {}", raw).into())
     }
+}
+
+// XML conversions
+
+impl FromXmlNode for GameState {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            turn: node.attribute("turn")?.parse()?,
+            round: node.attribute("round")?.parse()?,
+            start_piece: node.attribute("startPiece")?.parse()?,
+            start_team: Team::from_node(node.child_by_name("startTeam")?)?,
+            ordered_colors: node.child_by_name("orderedColors")?.childs_by_name("color").map(Color::from_node),
+            current_color_index: node.attribute("currentColorIndex")?.parse()?,
+            blue_shapes: node.child_by_name("blueShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
+            yellow_shapes: node.child_by_name("yellowShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
+            red_shapes: node.child_by_name("redShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
+            green_shapes: node.child_by_name("greenShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?
+        })
+    }
+}
+
+impl FromXmlNode for PieceShape {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        node.content().parse()
+    }
+}
+
+impl FromXmlNode for Color {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        node.content().parse()
+    }
+}
+
+impl FromXmlNode for Team {
+
 }
