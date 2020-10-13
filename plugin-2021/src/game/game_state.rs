@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Board, Color, PieceShape, Player, Team};
+use super::{Board, Color, Move, PieceShape, Player, Team, PIECE_SHAPES};
 
 /// A snapshot of the game's state. It holds the
 /// information needed to compute the next move.
@@ -31,14 +31,16 @@ pub struct GameState {
     /// The current color's index
     pub current_color_index: u32,
     /// The undeployed blue shapes.
-    pub blue_shapes: Vec<PieceShape>,
+    pub blue_shapes: HashSet<PieceShape>,
     /// The undeployed yellow shapes.
-    pub yellow_shapes: Vec<PieceShape>,
+    pub yellow_shapes: HashSet<PieceShape>,
     /// The undeployed red shapes.
-    pub red_shapes: Vec<PieceShape>,
+    pub red_shapes: HashSet<PieceShape>,
     /// The undeployed green shapes.
-    pub green_shapes: Vec<PieceShape>
+    pub green_shapes: HashSet<PieceShape>
 }
+
+const SUM_MAX_SQUARES: i32 = 89;
 
 impl GameState {
     /// Fetches the current color.
@@ -69,6 +71,68 @@ impl GameState {
             Color::Blue => self.blue_shapes.iter(),
             Color::None => panic!("Cannot fetch shapes of color 'none'!")
         }
+    }
+
+    // Game rule logic is mostly a direct translation of
+    // https://github.com/CAU-Kiel-Tech-Inf/backend/blob/97d185660754ffba4bd4444f3f39ae350f1d053e/plugin/src/shared/sc/plugin2021/util/GameRuleLogic.kt
+
+    /// Computes the points from the given, undeployed piece shapes.
+    fn get_points_from_undeployed(undeployed: HashSet<PieceShape>, mono_last: bool) -> i32 {
+        // If all pieces were placed
+        if undeployed.is_empty() {
+            // Return sum of all squares plus 15 bonus points.
+            // If the Monomino was the last placed piece, add another 5 points
+            SUM_MAX_SQUARES + 15 + if mono_last { 5 } else { 0 }
+        } else {
+            // One point per piece placed
+            let placed_points: i32 = undeployed.iter().map(|p| p.coordinates().count() as i32).sum();
+            SUM_MAX_SQUARES - placed_points
+        }
+    }
+
+    /// Whether the game state is in the first round.
+    pub fn is_first_move(&self) -> bool {
+        self.shapes_of_color(self.current_color()).count() == PIECE_SHAPES.len()
+    }
+
+    /// Performs the given move.
+    pub fn perform_move(&mut self, game_move: Move) -> SCResult<()> {
+        #[cfg(debug_assertions)]
+        self.validate_move_color(game_move)?;
+
+        match game_move {
+            Move::Set { piece } => self.perform_set_move(piece),
+            Move::Skip { color } => self.perform_skip_move()
+        }
+    }
+
+    /// Fetches the state after the given move.
+    pub fn after_move(&self, game_move: Move) -> SCResult<GameState> {
+        let mut s = self.clone();
+        s.perform_move(game_move)?;
+        Ok(s)
+    }
+
+    /// Checks whether the given move has the right color.
+    fn validate_move_color(&self, game_move: Move) -> SCResult<()> {
+        if game_move.color() != self.current_color() {
+            Err(format!("Move color {} does not match game state color {}!", game_move.color(), self.current_color()).into())
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Checks whether the given shape is valid.
+    fn validate_shape(&self, shape: PieceShape, color: Color) -> SCResult<()> {
+        if self.is_first_move() {
+            if shape != self.start_piece {
+                return Err(format!("{} is not the (requested) first shape", shape).into())
+            }
+        } else if !self.shapes_of_color(color).any(|&p| p == shape) {
+            return Err(format!("Piece {} has already been placed before!", shape).into())
+        }
+
+        Ok(())
     }
 }
 

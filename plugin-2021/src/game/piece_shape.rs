@@ -136,7 +136,7 @@ impl IntoIterator for CoordinateSet {
 }
 
 /// Represents a shape in Blokus. There are 21 different kinds of these.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PieceShape {
     /// The shape's internal name.
     name: &'static str,
