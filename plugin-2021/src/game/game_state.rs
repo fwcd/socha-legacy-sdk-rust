@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, iter::once};
 
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Board, Color, Move, PIECE_SHAPES, PIECE_SHAPES_BY_NAME, Piece, PieceShape, Player, Team};
+use super::{BOARD_SIZE, Board, CORNERS, Color, Move, PIECE_SHAPES, PIECE_SHAPES_BY_NAME, Piece, PieceShape, Player, Team, Vec2};
 
 /// A snapshot of the game's state. It holds the
 /// information needed to compute the next move.
@@ -223,32 +223,73 @@ impl GameState {
         Ok(())
     }
 
-    /// Fetches the possible moves
-    fn possible_moves(&self) -> impl Iterator<Item=Move> {
-        // TODO: Skip moves?
-        self.possible_set_moves()
+    fn validate_skip(&self) -> SCResult<()> {
+        self.clone().try_advance(1)
     }
 
-    /// Fetches the possible set moves
-    fn possible_set_moves(&self) -> impl Iterator<Item=Move> {
-        // TODO
-        vec![].into_iter()
+    /// Fetches the possible moves
+    pub fn possible_moves(&self) -> impl Iterator<Item=Move> {
+        if self.is_first_move() {
+            self.possible_first_moves()
+                .collect::<Vec<_>>()
+                .into_iter()
+        } else {
+            self.possible_usual_set_moves()
+                .chain(once(Move::Skip { color: self.current_color() }).filter(|_| self.validate_skip().is_ok()))
+                .collect::<Vec<_>>()
+                .into_iter()
+        }
     }
 
     /// Fetches the possible non-start moves
     fn possible_usual_set_moves(&self) -> impl Iterator<Item=Move> {
-        // TODO
-        vec![].into_iter()
+        let color = self.current_color();
+        self.undeployed_shapes_of_color(color)
+            .flat_map(|kind| {
+                let bb = kind.bounding_box();
+                let placable = Vec2::both(BOARD_SIZE as i32 - 1) - bb;
+                kind.transformations()
+                    .flat_map(|(rotation, is_flipped)| placable
+                        .into_iter()
+                        .map(move |position| Piece {
+                            kind: kind.clone(),
+                            rotation,
+                            is_flipped,
+                            color,
+                            position
+                        })
+                    )
+                    .filter(|piece| self.validate_set_move(piece).is_ok())
+                    .map(|piece| Move::Set { piece })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 
-    // /// Fetches the possible start moves
-    // fn possible_start_set_moves(&self) -> impl Iterator<Item=Move> {
-    //     let kind = self.start_piece;
-    //     kind
-    //         .transformations()
-    //         .flat_map(|(rotation, is_flipped)| Board::corner_positions()
-    //             .map(|corner| Move::Set { piece: Piece { kind, rotation, is_flipped, color, position } }))
-    // }
+    /// Fetches the possible start moves
+    fn possible_first_moves(&self) -> impl Iterator<Item=Move> {
+        let kind = self.start_piece.clone();
+        let color = self.current_color();
+        kind
+            .transformations()
+            .flat_map(|(rotation, is_flipped)| {
+                let k = kind.clone();
+                CORNERS
+                    .iter()
+                    .map(move |&corner| Piece {
+                        kind: k.clone(),
+                        rotation,
+                        is_flipped,
+                        color,
+                        position: Board::align(k.transform(rotation, is_flipped).bounding_box(), corner)
+                    })
+                    .filter(|piece| self.validate_set_move(piece).is_ok())
+                    .map(|piece| Move::Set { piece })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
 }
 
 impl FromXmlNode for GameState {

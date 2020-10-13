@@ -223,6 +223,13 @@ impl PieceShape {
         let current = self.clone();
         self.transformations().map(move |(r, f)| current.transform(r, f))
     }
+
+    /// Fetches the bounding box of the piece shape, i.e. the smallest rectangle containing it.
+    pub fn bounding_box(&self) -> Vec2 {
+        let min = self.coordinates.into_iter().fold(Vec2::zero(), |m, c| m.min(c));
+        let max = self.coordinates.into_iter().fold(Vec2::zero(), |m, c| m.max(c));
+        max - min
+    }
 }
 
 impl FromStr for PieceShape {

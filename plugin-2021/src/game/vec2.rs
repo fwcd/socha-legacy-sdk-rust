@@ -12,17 +12,27 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
-    /// Creates new coordinates.
+    /// Creates a new vector.
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 
-    /// Rotates these coordinates 90 degrees clockwise.
+    /// Creates a new vector with both components initialized to the given value.
+    pub fn both(value: i32) -> Self {
+        Self::new(value, value)
+    }
+
+    /// The origin.
+    pub fn zero() -> Self {
+        Self::new(0, 0)
+    }
+
+    /// Rotates this vector 90 degrees clockwise.
     pub fn turn_right(self) -> Self {
         Self::new(-self.y, self.x)
     }
 
-    /// Rotates these coordinates 90 degrees counter-clockwise.
+    /// Rotates this vector 90 degrees counter-clockwise.
     pub fn turn_left(self) -> Self {
         Self::new(self.y, -self.x)
     }
@@ -40,6 +50,40 @@ impl Vec2 {
     /// Finds the maximum with another point.
     pub fn max(self, other: Vec2) -> Self {
         Self::new(self.x.max(other.x), self.y.max(other.y))
+    }
+}
+
+pub struct Vec2Iterator {
+    target: Vec2,
+    x: i32,
+    y: i32
+}
+
+impl Iterator for Vec2Iterator {
+    type Item = Vec2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.x > self.target.x || self.y > self.target.y {
+            None
+        } else {
+            let (x, y) = (self.x, self.y);
+            self.x += 1;
+            if self.x > self.target.x {
+                self.x = 0;
+                self.y += 1;
+            }
+            Some(Vec2::new(x, y))
+        }
+    }
+}
+
+impl IntoIterator for Vec2 {
+    type Item = Vec2;
+    type IntoIter = Vec2Iterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        assert!(self.x >= 0 && self.y >= 0, "Vectors with negative components cannot be iterated!");
+        Vec2Iterator { target: self, x: 0, y: 0 }
     }
 }
 
