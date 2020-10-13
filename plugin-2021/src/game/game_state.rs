@@ -4,23 +4,39 @@ use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
 use super::{Board, Color, PieceShape, Player, Team};
 
-/// A snapshot of the game's state.
+/// A snapshot of the game's state. It holds the
+/// information needed to compute the next move.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameState {
+    /// The number of already committed moves.
     pub turn: u32,
+    /// The number of rounds.
     pub round: u32,
+    /// The first team's player.
     pub first: Player,
+    /// The second team's player.
     pub second: Player,
+    /// The current game board.
     pub board: Board,
+    /// The piece that has to be placed in the first round.
     pub start_piece: PieceShape,
+    /// The color that begins the game.
     pub start_color: Color,
+    /// The team that begins the game.
     pub start_team: Team,
+    /// A list of all colors currently in the game.
     pub ordered_colors: Vec<Color>,
+    /// A map that stores, for each color, whether the last move was a monomino if all pieces have been placed.
     pub last_move_mono: HashMap<Color, bool>,
+    /// The current color's index
     pub current_color_index: u32,
+    /// The undeployed blue shapes.
     pub blue_shapes: Vec<PieceShape>,
+    /// The undeployed yellow shapes.
     pub yellow_shapes: Vec<PieceShape>,
+    /// The undeployed red shapes.
     pub red_shapes: Vec<PieceShape>,
+    /// The undeployed green shapes.
     pub green_shapes: Vec<PieceShape>
 }
 
@@ -33,6 +49,15 @@ impl GameState {
     /// Fetches the current team.
     pub fn current_team(&self) -> Team {
         self.current_color().team()
+    }
+
+    /// Fetches the current player.
+    pub fn current_player(&self) -> &Player {
+        match self.current_team() {
+            Team::One => &self.first,
+            Team::Two => &self.second,
+            Team::None => panic!("Cannot fetch the current player with the team being 'none'!")
+        }
     }
 
     /// Fetches the undeployed piece shapes of a given color.
