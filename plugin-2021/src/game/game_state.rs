@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Board, Color, Move, PIECE_SHAPES, Piece, PieceShape, Player, Team};
+use super::{Board, Color, Move, PIECE_SHAPES, PIECE_SHAPES_BY_NAME, Piece, PieceShape, Player, Team};
 
 /// A snapshot of the game's state. It holds the
 /// information needed to compute the next move.
@@ -63,12 +63,23 @@ impl GameState {
     }
 
     /// Fetches the undeployed piece shapes of a given color.
-    pub fn shapes_of_color(&self, color: Color) -> impl Iterator<Item=&PieceShape> {
+    pub fn undeployed_shapes_of_color(&self, color: Color) -> impl Iterator<Item=&PieceShape> {
         match color {
             Color::Red => self.red_shapes.iter(),
             Color::Yellow => self.yellow_shapes.iter(),
             Color::Green => self.green_shapes.iter(),
             Color::Blue => self.blue_shapes.iter(),
+            Color::None => panic!("Cannot fetch shapes of color 'none'!")
+        }
+    }
+
+    /// Fetches the undeployed piece shapes of a given color mutably.
+    pub fn undeployed_shapes_of_color_mut(&mut self, color: Color) -> &mut HashSet<PieceShape> {
+        match color {
+            Color::Red => &mut self.red_shapes,
+            Color::Yellow => &mut self.yellow_shapes,
+            Color::Green => &mut self.green_shapes,
+            Color::Blue => &mut self.blue_shapes,
             Color::None => panic!("Cannot fetch shapes of color 'none'!")
         }
     }
@@ -92,7 +103,7 @@ impl GameState {
 
     /// Whether the game state is in the first round.
     pub fn is_first_move(&self) -> bool {
-        self.shapes_of_color(self.current_color()).count() == PIECE_SHAPES.len()
+        self.undeployed_shapes_of_color(self.current_color()).count() == PIECE_SHAPES.len()
     }
 
     /// Performs the given move.
@@ -128,7 +139,7 @@ impl GameState {
             if shape != &self.start_piece {
                 return Err(format!("{} is not the (requested) first shape", shape).into())
             }
-        } else if !self.shapes_of_color(color).any(|p| p == shape) {
+        } else if !self.undeployed_shapes_of_color(color).any(|p| p == shape) {
             return Err(format!("Piece {} has already been placed before!", shape).into())
         }
 
@@ -168,13 +179,37 @@ impl GameState {
         Ok(())
     }
 
+    pub fn try_advance(&mut self, turns: u32) -> SCResult<()> {
+        if self.ordered_colors.is_empty() {
+            return Err("Game has already ended, cannot advance!".into());
+        }
+
+        self.current_color_index = (self.current_color_index + turns) % self.ordered_colors.len() as u32;
+        // TODO: This doesn't seem correct, but matches the implementation of https://github.com/CAU-Kiel-Tech-Inf/backend/blob/97d185660754ffba4bd4444f3f39ae350f1d053e/plugin/src/shared/sc/plugin2021/GameState.kt#L114-L123
+        // Perhaps we should divide AFTER the turns have been added, then simply assign instead of add-assign the round?
+        self.round += turns / self.ordered_colors.len() as u32;
+        self.turn += turns;
+
+        Ok(())
+    }
+
     /// Performs the given set move.
     fn perform_set_move(&mut self, piece: Piece) -> SCResult<()> {
         #[cfg(debug_assertions)]
         self.validate_set_move(&piece)?;
 
-        // TODO
+        self.board.place(&piece);
 
+        let undeployed = self.undeployed_shapes_of_color_mut(piece.color);
+        undeployed.remove(&piece.shape());
+        // TODO: Track deployed shapes
+        
+        // If this was the last piece for this color, remove it from the turn queue
+        if undeployed.is_empty() {
+            self.last_move_mono.insert(piece.color, piece.kind == PIECE_SHAPES_BY_NAME["MONO"]);
+        }
+
+        self.try_advance(1)?;
         Ok(())
     }
 

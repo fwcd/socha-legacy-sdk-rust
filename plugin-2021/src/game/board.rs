@@ -1,6 +1,6 @@
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Color, Coordinates, Field};
+use super::{Color, Coordinates, Field, Piece};
 
 pub const BOARD_SIZE: usize = 20;
 const BOARD_CORNERS: [Coordinates; 4] = [
@@ -49,7 +49,24 @@ impl Board {
 
     /// Fetches the color at the given position.
     pub fn get(&self, position: Coordinates) -> Color {
+        // TODO: This is very inefficient and would be much better handled using a matrix
         self.fields.iter().find(|f| f.position == position).map(|f| f.content).unwrap_or_default()
+    }
+
+    /// Places the color at the given position.
+    pub fn set(&mut self, position: Coordinates, color: Color) {
+        // TODO: This is very inefficient and would be much better handled using a matrix
+        match self.fields.iter_mut().find(|f| f.position == position) {
+            Some(field) => field.content = color,
+            None => self.fields.push(Field { position, content: color })
+        }
+    }
+
+    /// Places the given piece on the board WITH NO ADDITIONAL CHECKS.
+    pub fn place(&mut self, piece: &Piece) {
+        for position in piece.coordinates() {
+            self.set(position, piece.color);
+        }
     }
 
     /// Checks whether the given position is obstructed.
