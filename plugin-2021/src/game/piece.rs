@@ -20,11 +20,7 @@ pub struct Piece {
 impl Piece {
     /// Fetches the piece's actual (transformed) shape
     pub fn shape(&self) -> PieceShape {
-        let mut shape = self.kind.rotate(self.rotation);
-        if self.is_flipped {
-            shape = shape.flip();
-        }
-        shape
+        self.kind.transform(self.rotation, self.is_flipped)
     }
 
     /// Fetches the piece's actual coordinates.

@@ -2,6 +2,8 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 
 use socha_client_base::{error::SCError, util::SCResult};
 
+pub const ROTATIONS: [Rotation; 3] = [Rotation::Left, Rotation::Right, Rotation::Mirror];
+
 /// Describes how a piece shape is rotated.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Rotation {

@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, str::FromStr};
 use lazy_static::lazy_static;
 use socha_client_base::{error::SCError, util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
 
-use super::{BOARD_SIZE, Coordinates, Rotation};
+use super::{BOARD_SIZE, Coordinates, ROTATIONS, Rotation};
 
 lazy_static! {
     pub static ref PIECE_SHAPES: [PieceShape; 21] = [
@@ -148,7 +148,7 @@ pub struct PieceShape {
 
 impl PieceShape {
     fn new(name: &'static str, coordinates: impl IntoIterator<Item=Coordinates>) -> Self {
-        Self { name: name, coordinates: CoordinateSet::from(coordinates.into_iter()) }
+        Self { name, coordinates: CoordinateSet::from(coordinates.into_iter()) }
     }
 
     /// The piece's (internal) name.
@@ -202,6 +202,26 @@ impl PieceShape {
             Rotation::Right => self.turn_right().align(),
             Rotation::Left => self.turn_left().align()
         }
+    }
+
+    /// Applies the given rotation/flip-combination.
+    pub fn transform(&self, rotation: Rotation, flip: bool) -> Self {
+        let mut p = self.rotate(rotation);
+        if flip {
+            p = p.flip();
+        }
+        p
+    }
+
+    /// Fetches the possible rotation/flip-combinations
+    pub fn transformations(&self) -> impl Iterator<Item=(Rotation, bool)> {
+        ROTATIONS.iter().flat_map(|&r| [true, false].iter().map(move |&f| (r, f)))
+    }
+
+    /// Fetches each variant of this shape.
+    pub fn variants(&self) -> impl Iterator<Item=PieceShape> {
+        let current = self.clone();
+        self.transformations().map(move |(r, f)| current.transform(r, f))
     }
 }
 
