@@ -27,9 +27,11 @@ impl From<Move> for XmlNode {
                 .attribute("class", "sc.plugin2021.SetMove")
                 .child(piece)
                 .build(),
-            // TODO: Shall the color be encoded?
-            Move::Skip { .. } => XmlNode::new("data")
+            Move::Skip { color } => XmlNode::new("data")
                 .attribute("class", "sc.plugin2021.SkipMove")
+                .child(XmlNode::new("color")
+                    .content(color.to_string().as_str())
+                    .build())
                 .build()
         }
     }
