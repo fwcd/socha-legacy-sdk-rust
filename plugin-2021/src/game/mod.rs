@@ -1,6 +1,5 @@
 mod board;
 mod color;
-mod constants;
 mod coordinates;
 mod field;
 mod game_state;
@@ -13,7 +12,6 @@ mod team;
 
 pub use board::*;
 pub use color::*;
-pub use constants::*;
 pub use coordinates::*;
 pub use field::*;
 pub use game_state::*;
