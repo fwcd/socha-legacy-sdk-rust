@@ -35,13 +35,23 @@ impl Board {
         self.fields.iter().any(|f| f.position == position && f.content != Color::None)
     }
 
-    /// Checks whether the position touches another piece of same color.
-    pub fn is_color_touched(&self, position: Coordinates, color: Color) -> bool {
+    /// Checks whether the position touches another border of same color.
+    pub fn borders_on_color(&self, position: Coordinates, color: Color) -> bool {
         [
             Coordinates::new(1, 0),
             Coordinates::new(0, 1),
             Coordinates::new(-1, 0),
             Coordinates::new(0, -1)
+        ].iter().any(|&o| self.get(position + o) == color)
+    }
+
+    /// Checks whether the position touches another corner of same color.
+    pub fn corners_on_color(&self, position: Coordinates, color: Color) -> bool {
+        [
+            Coordinates::new(1, 1),
+            Coordinates::new(1, 1),
+            Coordinates::new(-1, 1),
+            Coordinates::new(1, -1)
         ].iter().any(|&o| self.get(position + o) == color)
     }
 }
