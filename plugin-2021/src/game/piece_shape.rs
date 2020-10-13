@@ -69,7 +69,7 @@ impl CoordinateSet {
     }
 
     fn index_of(coordinates: Vec2) -> usize {
-        assert!(coordinates.x >= 0 && coordinates.y >= 0, "Vec2 have to be positive!");
+        assert!(coordinates.x >= 0 && coordinates.y >= 0, "Coordinates have to be positive!");
         assert!(coordinates.y < MAX_SIDE_LENGTH && coordinates.y < MAX_SIDE_LENGTH, "Vec2 are out of bounds!");
 
         let i = (coordinates.y * MAX_SIDE_LENGTH) + coordinates.x;
@@ -210,7 +210,7 @@ impl PieceShape {
         if flip {
             p = p.flip();
         }
-        p
+        p.align()
     }
 
     /// Fetches the possible rotation/flip-combinations
