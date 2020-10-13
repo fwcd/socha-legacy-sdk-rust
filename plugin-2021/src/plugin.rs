@@ -16,7 +16,7 @@ impl SCPlugin for SCPlugin2021 {
 impl HasPlayerColor for game::GameState {
     type PlayerColor = game::Team;
 
-    fn player_color(&self) -> Self::PlayerColor { self.current_player_color }
+    fn player_color(&self) -> Self::PlayerColor { self.ordered_colors[self.current_color_index as usize].team() }
 }
 
 impl HasTurn for game::GameState {

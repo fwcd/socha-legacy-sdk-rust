@@ -1,4 +1,4 @@
-use socha_client_base::{error::SCError, hashmap, util::{SCResult, HasOpponent}, xml_node::FromXmlNode, xml_node::XmlNode};
+use socha_client_base::{error::SCError, util::{SCResult, HasOpponent}, xml_node::FromXmlNode, xml_node::XmlNode};
 use std::{collections::{HashSet, HashMap}, convert::TryFrom, fmt, ops::{Add, Sub, Neg}, str::FromStr};
 use lazy_static::lazy_static;
 
@@ -123,35 +123,36 @@ impl HasOpponent for Team {
 // Constants
 
 pub const BOARD_SIZE: usize = 20;
-pub const PIECE_SHAPES: [PieceShape; 21] = [
-    PieceShape::new("MONO", vec![Coordinates::new(0, 0)]),
-    PieceShape::new("DOMINO", vec![Coordinates::new(0, 0), Coordinates::new(1, 0)]),
-    PieceShape::new("TRIO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new("TRIO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2)]),
-    PieceShape::new("TETRO_O", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new("TETRO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1)]),
-    PieceShape::new("TETRO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3)]),
-    PieceShape::new("TETRO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
-    PieceShape::new("TETRO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
-    PieceShape::new("PENTO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(1, 3)]),
-    PieceShape::new("PENTO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
-    PieceShape::new("PENTO_V", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-    PieceShape::new("PENTO_S", vec![Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
-    PieceShape::new("PENTO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-    PieceShape::new("PENTO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
-    PieceShape::new("PENTO_P", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
-    PieceShape::new("PENTO_W", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
-    PieceShape::new("PENTO_U", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
-    PieceShape::new("PENTO_R", vec![Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
-    PieceShape::new("PENTO_X", vec![Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
-    PieceShape::new("PENTO_Y", vec![Coordinates::new(0, 1), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(1, 3)])
-];
 
 lazy_static! {
+    pub static ref PIECE_SHAPES: [PieceShape; 21] = [
+        PieceShape::new("MONO", vec![Coordinates::new(0, 0)]),
+        PieceShape::new("DOMINO", vec![Coordinates::new(0, 0), Coordinates::new(1, 0)]),
+        PieceShape::new("TRIO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        PieceShape::new("TRIO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2)]),
+        PieceShape::new("TETRO_O", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        PieceShape::new("TETRO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1)]),
+        PieceShape::new("TETRO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3)]),
+        PieceShape::new("TETRO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2)]),
+        PieceShape::new("TETRO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(2, 1)]),
+        PieceShape::new("PENTO_L", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(1, 3)]),
+        PieceShape::new("PENTO_T", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(1, 1), Coordinates::new(1, 2)]),
+        PieceShape::new("PENTO_V", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        PieceShape::new("PENTO_S", vec![Coordinates::new(1, 0), Coordinates::new(2, 0), Coordinates::new(3, 0), Coordinates::new(0, 1), Coordinates::new(1, 1)]),
+        PieceShape::new("PENTO_Z", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        PieceShape::new("PENTO_I", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(0, 2), Coordinates::new(0, 3), Coordinates::new(0, 4)]),
+        PieceShape::new("PENTO_P", vec![Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(0, 2)]),
+        PieceShape::new("PENTO_W", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 2)]),
+        PieceShape::new("PENTO_U", vec![Coordinates::new(0, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+        PieceShape::new("PENTO_R", vec![Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(2, 1), Coordinates::new(2, 0)]),
+        PieceShape::new("PENTO_X", vec![Coordinates::new(1, 0), Coordinates::new(0, 1), Coordinates::new(1, 1), Coordinates::new(2, 1), Coordinates::new(1, 2)]),
+        PieceShape::new("PENTO_Y", vec![Coordinates::new(0, 1), Coordinates::new(1, 0), Coordinates::new(1, 1), Coordinates::new(1, 2), Coordinates::new(1, 3)])
+    ];
+
     pub static ref PIECE_SHAPES_BY_NAME: HashMap<String, PieceShape> = {
         let mut m = HashMap::new();
         for piece in PIECE_SHAPES.iter() {
-            m.insert(piece.name, piece);
+            m.insert(piece.name.to_owned(), piece.clone());
         }
         m
     };
@@ -230,6 +231,16 @@ impl PieceShape {
             Rotation::Mirror => self.mirror().align(),
             Rotation::Right => self.turn_right().align(),
             Rotation::Left => self.turn_left().align()
+        }
+    }
+}
+
+impl Color {
+    pub fn team(self) -> Team {
+        match self {
+            Color::Red | Color::Blue => Team::One,
+            Color::Yellow | Color::Green => Team::Two,
+            Color::None => Team::None
         }
     }
 }
