@@ -93,7 +93,7 @@ impl HasOpponent for Team {
 // Constants
 
 pub const BOARD_SIZE: usize = 20;
-pub const PIECE_SHAPES: [PieceShape] = [
+pub const PIECE_SHAPES: [PieceShape; 21] = [
     PieceShape::new(&[Coordinates::new(0, 0)]),
     PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0)]),
     PieceShape::new(&[Coordinates::new(0, 0), Coordinates::new(1, 0), Coordinates::new(1, 1)]),
@@ -189,9 +189,9 @@ impl PieceShape {
     pub fn rotate(&self, rotation: Rotation) -> Self {
         match rotation {
             Rotation::None => self,
-            Rotation::Mirror => mirror().align(),
-            Rotation::Right => turn_right().align(),
-            Rotation::Left => turn_left().align()
+            Rotation::Mirror => self.mirror().align(),
+            Rotation::Right => self.turn_right().align(),
+            Rotation::Left => self.turn_left().align()
         }
     }
 }
@@ -248,7 +248,7 @@ impl From<Team> for String {
 }
 
 impl TryFrom<i32> for Rotation {
-    type Err = SCError;
+    type Error = SCError;
 
     fn try_from(n: i32) -> SCResult<Self> {
         match n {
@@ -273,7 +273,7 @@ impl From<Rotation> for i32 {
 }
 
 impl TryFrom<usize> for PieceShape {
-    type Err = SCError;
+    type Error = SCError;
 
     fn try_from(kind: usize) -> SCResult<Self> {
         if kind >= 0 && kind < PIECE_SHAPES.len() {
