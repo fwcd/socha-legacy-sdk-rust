@@ -9,5 +9,5 @@ socha-client-base = { path = "../client-base" }
 log = "0.4"
 arrayvec = "0.5"
 itertools = "0.9"
-regex = "1.3"
+regex = "1.4"
 lazy_static = "1.4"
