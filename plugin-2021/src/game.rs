@@ -336,11 +336,42 @@ impl From<Rotation> for i32 {
     }
 }
 
+impl FromStr for Rotation {
+    type Err = SCError;
+
+    fn from_str(raw: &str) -> SCResult<Self> {
+        match raw.to_uppercase().as_str() {
+            "NONE" => Ok(Rotation::None),
+            "RIGHT" => Ok(Rotation::Right),
+            "MIRROR" => Ok(Rotation::Mirror),
+            "LEFT" => Ok(Rotation::Left),
+            _ => Err(format!("Could not parse rotation {}", raw).into())
+        }
+    }
+}
+
+impl fmt::Display for Rotation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Rotation::None => write!(f, "NONE"),
+            Rotation::Right => write!(f, "RIGHT"),
+            Rotation::Mirror => write!(f, "MIRROR"),
+            Rotation::Left => write!(f, "LEFT")
+        }
+    }
+}
+
 impl FromStr for PieceShape {
     type Err = SCError;
 
     fn from_str(raw: &str) -> SCResult<Self> {
         Ok(PIECE_SHAPES_BY_NAME.get(raw).ok_or_else(|| format!("Could not parse shape {}", raw))?.clone())
+    }
+}
+
+impl fmt::Display for PieceShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -383,7 +414,7 @@ impl FromXmlNode for Piece {
             kind: node.attribute("kind")?.parse()?,
             rotation: node.attribute("rotation")?.parse()?,
             is_flipped: node.attribute("isFlipped")?.parse()?,
-            position: Coordinates::from_node(node.child_by_name("position")?)
+            position: Coordinates::from_node(node.child_by_name("position")?)?
         })
     }
 }
@@ -429,7 +460,7 @@ impl FromXmlNode for Player {
     fn from_node(node: &XmlNode) -> SCResult<Self> {
         Ok(Self {
             team: Team::from_node(node.child_by_name("color")?)?,
-            display_name: node.attribute("displayName")?
+            display_name: node.attribute("displayName")?.to_owned()
         })
     }
 }
