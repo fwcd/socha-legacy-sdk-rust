@@ -4,7 +4,7 @@
 mod board;
 mod constants;
 mod field;
-mod game_move;
+mod r#move;
 mod game_state;
 mod piece_type;
 mod piece;
@@ -15,7 +15,7 @@ mod positioned_field;
 pub use board::*;
 pub use constants::*;
 pub use field::*;
-pub use game_move::*;
+pub use r#move::*;
 pub use game_state::*;
 pub use piece_type::*;
 pub use piece::*;
