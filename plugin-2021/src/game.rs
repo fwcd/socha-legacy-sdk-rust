@@ -38,19 +38,30 @@ pub struct GameState {
     pub second: Player,
     pub board: Board,
     pub start_piece: PieceShape,
+    pub start_color: Color,
     pub start_team: Team,
-    pub current_team: Team,
+    // TODO: Current team accessor
     pub ordered_colors: Vec<Color>,
-    current_color_index: u32,
-    blue_shapes: HashSet<PieceShape>,
-    yellow_shapes: HashSet<PieceShape>,
-    red_shapes: HashSet<PieceShape>,
-    green_shapes: HashSet<PieceShape>
+    pub last_move_mono: HashMap<Color, bool>,
+    pub current_color_index: u32,
+    // TODO: Accessor for color -> piece shape
+    pub blue_shapes: HashSet<PieceShape>,
+    pub yellow_shapes: HashSet<PieceShape>,
+    pub red_shapes: HashSet<PieceShape>,
+    pub green_shapes: HashSet<PieceShape>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
-    pub fields: Vec<Vec<Color>>
+    // TODO: More efficient representation, e.g. using a 2D matrix of colors
+    fields: Vec<Field>
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Field {
+    pub x: u32,
+    pub y: u32,
+    pub content: Color
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -324,14 +335,37 @@ impl FromXmlNode for GameState {
         Ok(Self {
             turn: node.attribute("turn")?.parse()?,
             round: node.attribute("round")?.parse()?,
+            first: Player::from_node(node.child_by_name("first")?)?,
+            second: Player::from_node(node.child_by_name("second")?)?,
+            board: Board::from_node(node.child_by_name("board")?)?,
             start_piece: node.attribute("startPiece")?.parse()?,
+            start_color: Color::from_node(node.child_by_name("startColor")?)?,
             start_team: Team::from_node(node.child_by_name("startTeam")?)?,
             ordered_colors: node.child_by_name("orderedColors")?.childs_by_name("color").map(Color::from_node),
+            last_move_mono: HashMap::new(), // TODO
             current_color_index: node.attribute("currentColorIndex")?.parse()?,
             blue_shapes: node.child_by_name("blueShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
             yellow_shapes: node.child_by_name("yellowShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
             red_shapes: node.child_by_name("redShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?,
             green_shapes: node.child_by_name("greenShapes")?.childs_by_name("shape").map(PieceShape::from_node).collect::<Result<_, _>>()?
+        })
+    }
+}
+
+impl FromXmlNode for Board {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            fields: node.childs_by_name("field").map(Field::from_node).collect::<Result<_, _>>()?
+        })
+    }
+}
+
+impl FromXmlNode for Field {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            x: node.attribute("x")?.parse()?,
+            y: node.attribute("y")?.parse()?,
+            content: node.attribute("content")?.parse()?
         })
     }
 }
@@ -349,5 +383,16 @@ impl FromXmlNode for Color {
 }
 
 impl FromXmlNode for Team {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        node.content().parse()
+    }
+}
 
+impl FromXmlNode for Player {
+    fn from_node(node: &XmlNode) -> SCResult<Self> {
+        Ok(Self {
+            team: Team::from_node(node.child_by_name("color")?)?,
+            display_name: node.attribute("displayName")?
+        })
+    }
 }
