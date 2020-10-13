@@ -2,6 +2,7 @@ use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
 use super::Color;
 
+/// A field on the board holding a color.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
     pub x: u32,

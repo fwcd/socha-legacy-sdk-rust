@@ -2,6 +2,7 @@ use socha_client_base::{util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode
 
 use super::{Color, Coordinates, PieceShape, Rotation};
 
+/// A game piece with color, position and transformed form.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
     /// The piece's shape

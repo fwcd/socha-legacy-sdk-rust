@@ -42,7 +42,9 @@ lazy_static! {
 /// Represents a shape in Blokus. There are 21 different kinds of these.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PieceShape {
+    /// The shape's internal name.
     name: String,
+    /// The normalized coordinates that make up the shape.
     coordinates: HashSet<Coordinates>
 }
 

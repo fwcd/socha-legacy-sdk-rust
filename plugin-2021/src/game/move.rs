@@ -2,6 +2,7 @@ use socha_client_base::xml_node::XmlNode;
 
 use super::Piece;
 
+/// A move in the game.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Move {
     /// A move that skips a round.
