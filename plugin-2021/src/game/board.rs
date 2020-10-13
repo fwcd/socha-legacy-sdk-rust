@@ -50,9 +50,9 @@ impl Board {
         let position = Self::corner_position(corner);
         match corner {
             Corner::TopLeft => position,
-            Corner::TopRight => position - area,
-            Corner::BottomLeft => Vec2::new(position.x - area.x, position.y),
-            Corner::BottomRight => Vec2::new(position.x, position.y - area.y)
+            Corner::TopRight => Vec2::new(position.x - area.x, position.y),
+            Corner::BottomLeft => Vec2::new(position.x, position.y - area.y),
+            Corner::BottomRight => position - area
         }
     }
 
