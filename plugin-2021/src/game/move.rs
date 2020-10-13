@@ -14,7 +14,7 @@ pub enum Move {
 impl Move {
     pub fn color(&self) -> Color {
         match self {
-            Self::Skip { color } => color,
+            Self::Skip { color } => *color,
             Self::Set { piece } => piece.color
         }
     }

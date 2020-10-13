@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 
-use super::{Board, Color, Move, PieceShape, Player, Team, PIECE_SHAPES};
+use super::{Board, Color, Move, PIECE_SHAPES, Piece, PieceShape, Player, Team};
 
 /// A snapshot of the game's state. It holds the
 /// information needed to compute the next move.
@@ -98,11 +98,11 @@ impl GameState {
     /// Performs the given move.
     pub fn perform_move(&mut self, game_move: Move) -> SCResult<()> {
         #[cfg(debug_assertions)]
-        self.validate_move_color(game_move)?;
+        self.validate_move_color(&game_move)?;
 
         match game_move {
             Move::Set { piece } => self.perform_set_move(piece),
-            Move::Skip { color } => self.perform_skip_move()
+            Move::Skip { .. } => self.perform_skip_move()
         }
     }
 
@@ -114,7 +114,7 @@ impl GameState {
     }
 
     /// Checks whether the given move has the right color.
-    fn validate_move_color(&self, game_move: Move) -> SCResult<()> {
+    fn validate_move_color(&self, game_move: &Move) -> SCResult<()> {
         if game_move.color() != self.current_color() {
             Err(format!("Move color {} does not match game state color {}!", game_move.color(), self.current_color()).into())
         } else {
@@ -123,14 +123,64 @@ impl GameState {
     }
 
     /// Checks whether the given shape is valid.
-    fn validate_shape(&self, shape: PieceShape, color: Color) -> SCResult<()> {
+    fn validate_shape(&self, shape: &PieceShape, color: Color) -> SCResult<()> {
         if self.is_first_move() {
-            if shape != self.start_piece {
+            if shape != &self.start_piece {
                 return Err(format!("{} is not the (requested) first shape", shape).into())
             }
-        } else if !self.shapes_of_color(color).any(|&p| p == shape) {
+        } else if !self.shapes_of_color(color).any(|p| p == shape) {
             return Err(format!("Piece {} has already been placed before!", shape).into())
         }
+
+        Ok(())
+    }
+
+    /// Checks whether the given set move is valid.
+    fn validate_set_move(&self, piece: &Piece) -> SCResult<()> {
+        self.validate_shape(&piece.shape(), piece.color)?;
+
+        for coordinates in piece.coordinates() {
+            if !self.board.is_in_bounds(coordinates) {
+                return Err(format!("Target position of the set move {} is not in the board's bounds!", coordinates).into());
+            }
+
+            if self.board.is_obstructed(coordinates) {
+                return Err(format!("Target position of the set move {} is obstructed!", coordinates).into());
+            }
+
+            if self.board.borders_on_color(coordinates, piece.color) {
+                return Err(format!("Target position of the set move {} already borders on {}!", coordinates, piece.color).into());
+            }
+        }
+
+        if self.is_first_move() {
+            // Check whether it is placed correctly in a corner
+            if !piece.coordinates().any(|p| self.board.is_on_corner(p)) {
+                return Err("The piece from the set move is not located in a corner!".into());
+            }
+        } else {
+            // Check whether the piece is connected to at least one tile of the same color by corner
+            if !piece.coordinates().any(|p| self.board.corners_on_color(p, piece.color)) {
+                return Err(format!("The piece {:?} shares no corner with another piece of same color!", piece).into());
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Performs the given set move.
+    fn perform_set_move(&mut self, piece: Piece) -> SCResult<()> {
+        #[cfg(debug_assertions)]
+        self.validate_set_move(&piece)?;
+
+        // TODO
+
+        Ok(())
+    }
+
+    /// Performs the given skip move
+    fn perform_skip_move(&self) -> SCResult<()> {
+        // TODO
 
         Ok(())
     }

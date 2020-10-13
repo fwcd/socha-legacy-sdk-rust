@@ -3,6 +3,12 @@ use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
 use super::{Color, Coordinates, Field};
 
 pub const BOARD_SIZE: usize = 20;
+const BOARD_CORNERS: [Coordinates; 4] = [
+    Coordinates { x: 0, y: 0 },
+    Coordinates { x: 0, y: BOARD_SIZE as i32 - 1 },
+    Coordinates { x: BOARD_SIZE as i32 - 1, y: 0 },
+    Coordinates { x: BOARD_SIZE as i32 - 1, y: BOARD_SIZE as i32 - 1 }
+];
 
 /// The game board is a 20x20 grid of fields with colors.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,12 +23,28 @@ impl Board {
         Self { fields: Vec::new() }
     }
 
+    // Note that the following bound checking methods
+    // do not depend on the self-instance, but are declared
+    // as instance methods anyways. This is intentional to
+    // have code depend as little as possible on the constness
+    // of the the board size.
+
     /// Checks whether the given coordinates are in the board's bounds.
     pub fn is_in_bounds(&self, coordinates: Coordinates) -> bool {
            coordinates.x >= 0
         && coordinates.y >= 0
         && coordinates.x < BOARD_SIZE as i32
         && coordinates.y < BOARD_SIZE as i32
+    }
+
+    /// Fetches the board's corners.
+    pub fn corners(&self) -> impl Iterator<Item=Coordinates> {
+        BOARD_CORNERS.iter().cloned()
+    }
+
+    /// Checks whether a coordinate is on a corner.
+    pub fn is_on_corner(&self, position: Coordinates) -> bool {
+        BOARD_CORNERS.contains(&position)
     }
 
     /// Fetches the color at the given position.
