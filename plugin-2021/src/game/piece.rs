@@ -48,7 +48,7 @@ impl From<Piece> for XmlNode {
             .attribute("color", piece.color.to_string())
             .attribute("kind", piece.kind.to_string())
             .attribute("rotation", piece.rotation.to_string())
-            .attribute("is_flipped", piece.is_flipped.to_string())
+            .attribute("isFlipped", piece.is_flipped.to_string())
             .child(XmlNode::new("position")
                 .attribute("x", piece.position.x.to_string())
                 .attribute("y", piece.position.y.to_string())
