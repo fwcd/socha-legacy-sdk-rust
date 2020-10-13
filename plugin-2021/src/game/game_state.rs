@@ -170,7 +170,7 @@ impl GameState {
 
     /// Checks whether the given set move is valid.
     fn validate_set_move(&self, piece: &Piece) -> SCResult<()> {
-        self.validate_shape(&piece.shape(), piece.color)?;
+        self.validate_shape(&piece.kind, piece.color)?;
 
         for coordinates in piece.coordinates() {
             if !Board::is_in_bounds(coordinates) {
@@ -338,14 +338,14 @@ impl FromXmlNode for GameState {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::{Color, Team, PIECE_SHAPES_BY_NAME};
+    use crate::game::{Color, Move, PIECE_SHAPES_BY_NAME, Team};
 
     use super::GameState;
 
     #[test]
     fn test_game_state() {
-        let start_piece = "TRIO_L";
-        let mut state = GameState::new(PIECE_SHAPES_BY_NAME[start_piece].clone());
+        let start_piece = "PENTO_Y";
+        let state = GameState::new(PIECE_SHAPES_BY_NAME[start_piece].clone());
 
         // Verify that the initial setup is correct
         assert_eq!(state.current_color(), Color::Blue);
@@ -362,6 +362,32 @@ mod tests {
         assert!(!possible_moves.is_empty());
         assert_eq!(possible_moves, possible_first_moves);
         
-        // panic!("{:#?}", possible_moves);
+        let shapes = possible_moves.iter().cloned().map(|m|
+            match m {
+                Move::Set { piece } => piece.shape().ascii_art().to_string(),
+                _ => panic!("Skip moves should never be first!")
+            }
+        ).map(|s| s.trim().to_string()).collect::<Vec<_>>();
+        
+        assert!(shapes.contains(&"#....\n\
+                                  ##...\n\
+                                  #....\n\
+                                  #....\n\
+                                  .....".to_string()));
+        assert!(shapes.contains(&"####.\n\
+                                  ..#..\n\
+                                  .....\n\
+                                  .....\n\
+                                  .....".to_string()));
+        assert!(shapes.contains(&"####.\n\
+                                  .#...\n\
+                                  .....\n\
+                                  .....\n\
+                                  .....".to_string()));
+        assert!(shapes.contains(&"#....\n\
+                                  #....\n\
+                                  ##...\n\
+                                  #....\n\
+                                  .....".to_string()));
     }
 }

@@ -103,6 +103,18 @@ impl<I> From<I> for CoordinateSet where I: Iterator<Item=Vec2> {
     }
 }
 
+impl fmt::Display for CoordinateSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for y in 0..MAX_SIDE_LENGTH {
+            for x in 0..MAX_SIDE_LENGTH {
+                write!(f, "{}", if self.contains(Vec2::new(x, y)) { '#' } else { '.' })?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
+}
+
 struct CoordinateSetIterator {
     bits: u32,
     i: i32
@@ -165,6 +177,11 @@ impl PieceShape {
     /// the origin (0, 0), the x-axis pointed right and the y-axis pointed downwards
     pub fn coordinates(&self) -> impl Iterator<Item=Vec2> {
         self.coordinates.into_iter()
+    }
+
+    /// Prints a human-readable ASCII-art of the coordinates to a string.
+    pub fn ascii_art(&self) -> String {
+        format!("{}", self.coordinates)
     }
 
     /// Mirrors this shape by negating all coordinates.
