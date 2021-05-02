@@ -9,13 +9,13 @@ use super::GameResult;
 /// are implemented independently of the base
 /// protocol for each year's game.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename = "data", rename_all = "camelCase")]
-pub enum Data<P> where P: SCPlugin {
+#[serde(rename = "data", tag = "class", rename_all = "camelCase")]
+pub enum Event<P> where P: SCPlugin {
     WelcomeMessage { color: P::PlayerColor },
     Memento { state: P::GameState },
-    Move(P::Move),
     #[serde(rename = "sc.framework.plugins.protocol.MoveRequest")]
     MoveRequest,
+    Move { r#move: P::Move },
     #[serde(bound(serialize = "P::Player: Serialize", deserialize = "P::Player: Deserialize<'de>"))]
     Result(GameResult<P::Player>),
     Error { message: String },

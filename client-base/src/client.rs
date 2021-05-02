@@ -7,7 +7,7 @@ use quick_xml::se::to_writer;
 use quick_xml::de::from_reader;
 use crate::util::SCResult;
 use crate::plugin::{SCPlugin, HasPlayerColor, HasTurn};
-use crate::protocol::{Packet, Joined, Left, Room, Data, GameResult};
+use crate::protocol::{Packet, Joined, Left, Room, Event, GameResult};
 
 /// A handler that implements the game player's
 /// behavior, usually employing some custom move
@@ -123,17 +123,17 @@ impl<D> SCClient<D>
             debug!("Got packet {:?}", packet);
             
             match packet {
-                Packet::Room(Room { data, room_id }) => match data {
-                    Data::WelcomeMessage { color } => {
+                Packet::Room(Room { event, room_id }) => match event {
+                    Event::WelcomeMessage { color } => {
                         info!("Got welcome message with color: {:?}", color);
                         self.delegate.on_welcome_message(&color);
                     },
-                    Data::Memento { state } => {
+                    Event::Memento { state } => {
                         info!("Got updated game state");
                         self.delegate.on_update_state(&state);
                         self.game_state = Some(state);
                     },
-                    Data::MoveRequest => {
+                    Event::MoveRequest => {
                         if let Some(ref state) = self.game_state {
                             let turn = state.turn();
                             let color = state.player_color();
@@ -142,7 +142,7 @@ impl<D> SCClient<D>
                             let new_move = self.delegate.request_move(state, color);
                             let move_packet = Packet::Room(Room::<D::Plugin> {
                                 room_id: room_id,
-                                data: Data::Move(new_move)
+                                event: Event::Move { r#move: new_move }
                             });
 
                             debug!("Sending move packet {:?}", move_packet);
@@ -152,14 +152,14 @@ impl<D> SCClient<D>
                             error!("Got move request, which cannot be fulfilled since no game state is present!");
                         }
                     },
-                    Data::Result(result) => {
+                    Event::Result(result) => {
                         info!("Got game result: {:?}", result);
                         self.delegate.on_game_end(result);
                     },
-                    Data::Error { message } => {
+                    Event::Error { message } => {
                         warn!("Got error from server: {}", message);
                     },
-                    _ => warn!("Could not handle room data: {:?}", data)
+                    _ => warn!("Could not handle event: {:?}", event)
                 },
                 Packet::Joined(Joined { room_id }) => info!("Joined room {}", room_id),
                 Packet::Left(Left { room_id }) => info!("Left room {}", room_id),

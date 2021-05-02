@@ -1,7 +1,7 @@
 //! The data structures used by the XML protocol.
 
 mod packet;
-mod data;
+mod event;
 mod game_result;
 mod joined;
 mod left;
@@ -14,12 +14,12 @@ mod score_definition;
 mod score_fragment;
 
 pub use packet::*;
-pub use data::*;
+pub use event::*;
 pub use game_result::*;
 pub use joined::*;
 pub use left::*;
 pub use close::*;
-pub use data::*;
+pub use event::*;
 pub use player_score::*;
 pub use room::*;
 pub use score_definition::*;
