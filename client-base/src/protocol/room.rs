@@ -4,7 +4,7 @@ use super::Data;
 
 /// A message in a room together with some data.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename = "room", rename_all = "camelCase")]
 pub struct Room<P> where P: SCPlugin {
     pub room_id: String,
     #[serde(bound(
