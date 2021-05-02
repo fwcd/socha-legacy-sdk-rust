@@ -10,6 +10,7 @@ use super::Field;
 /// in XML.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Fields {
+    // TODO: More efficient representation, e.g. using a 2D matrix of colors
     #[serde(rename = "field")]
     fields: Vec<Field>
 }
