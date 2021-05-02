@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use crate::error::SCError;
 
 /// Creates a new HashMap using a literal-like syntax. It automatically
@@ -54,6 +55,12 @@ pub mod serde_as_str {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct Wrap {
+    #[serde(rename = "$value")]
+    raw: String
+}
+
 /// A serde wrapper that uses the associated string-representation,
 /// however wrapped in an additional node that uses '$value' (representing
 /// the text between the XML tags).
@@ -61,12 +68,7 @@ pub mod serde_as_str {
 pub mod serde_as_wrapped_value {
     use std::{str::FromStr, fmt::Debug};
     use serde::{Serialize, Deserialize, Deserializer, Serializer, de::Error};
-
-    #[derive(Serialize, Deserialize)]
-    struct Wrap {
-        #[serde(rename = "$value")]
-        raw: String
-    }
+    use super::Wrap;
 
     pub fn serialize<S, T>(value: T, serializer: S) -> Result<S::Ok, S::Error> where T: ToString, S: Serializer {
         Wrap::serialize(&Wrap { raw: value.to_string() }, serializer)
@@ -75,5 +77,26 @@ pub mod serde_as_wrapped_value {
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error> where T: FromStr, T::Err: Debug, D: Deserializer<'de> {
         let raw = Wrap::deserialize(deserializer)?.raw;
         raw.parse().map_err(|e| D::Error::custom(format!("Could not parse string-based value: {:?}", e)))
+    }
+}
+
+/// A serde wrapper that uses the associated string-representation,
+/// however wrapped in an additional node that uses '$value' (representing
+/// the text between the XML tags) and wrapped in a vec.
+/// Can be used with `#[serde(with = "serde_as_wrapped_value")]`.
+pub mod serde_as_wrapped_value_vec {
+    use std::{str::FromStr, fmt::Debug};
+    use serde::{Serialize, Deserialize, Deserializer, Serializer, de::Error};
+    use super::Wrap;
+
+    pub fn serialize<S, T>(value: &Vec<T>, serializer: S) -> Result<S::Ok, S::Error> where T: ToString, S: Serializer {
+        Vec::serialize(&value.into_iter().map(|x| Wrap { raw: x.to_string() }).collect::<Vec<_>>(), serializer)
+    }
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error> where T: FromStr, T::Err: Debug, D: Deserializer<'de> {
+        Vec::deserialize(deserializer)?
+            .into_iter()
+            .map(|raw: String| raw.parse().map_err(|e| D::Error::custom(format!("Could not parse string-based value: {:?}", e))))
+            .collect::<Result<Vec<_>, _>>()
     }
 }

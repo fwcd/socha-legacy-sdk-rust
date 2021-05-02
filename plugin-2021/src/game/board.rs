@@ -65,13 +65,13 @@ impl Board {
     /// Fetches the color at the given position.
     pub fn get(&self, position: Vec2) -> Color {
         // TODO: This is very inefficient and would be much better handled using a matrix
-        self.fields.iter().find(|f| f.position == position).map(|f| f.content).unwrap_or_default()
+        self.fields.iter().find(|f| f.position() == position).map(|f| f.content).unwrap_or_default()
     }
 
     /// Places the color at the given position.
     pub fn set(&mut self, position: Vec2, color: Color) {
         // TODO: This is very inefficient and would be much better handled using a matrix
-        match self.fields.iter_mut().find(|f| f.position == position) {
+        match self.fields.iter_mut().find(|f| f.position() == position) {
             Some(field) => field.content = color,
             None => self.fields.push(Field::new(position, color))
         }
@@ -86,7 +86,7 @@ impl Board {
 
     /// Checks whether the given position is obstructed.
     pub fn is_obstructed(&self, position: Vec2) -> bool {
-        self.fields.iter().any(|f| f.position == position && f.content != Color::None)
+        self.fields.iter().any(|f| f.position() == position && f.content != Color::None)
     }
 
     /// Checks whether the position touches another border of same color.

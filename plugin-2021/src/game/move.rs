@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use socha_client_base::util::serde_as_wrapped_value;
 
 use super::{Color, Piece};
 
@@ -8,10 +9,15 @@ use super::{Color, Piece};
 pub enum Move {
     /// A move that skips a round.
     #[serde(rename = "sc.plugin2021.SkipMove")]
-    Skip { color: Color },
+    Skip {
+        #[serde(with = "serde_as_wrapped_value")]
+        color: Color
+    },
     /// A move that places an own, not yet placed piece.
     #[serde(rename = "sc.plugin2021.SetMove")]
-    Set { piece: Piece }
+    Set {
+        piece: Piece
+    }
 }
 
 impl Move {

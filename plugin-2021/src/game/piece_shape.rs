@@ -1,5 +1,4 @@
-use serde::{Serialize, Deserialize, Serializer, Deserializer, de::Error};
-use std::{collections::HashMap, convert::TryFrom, fmt, str::FromStr};
+use std::{collections::HashMap, fmt, str::FromStr};
 
 use lazy_static::lazy_static;
 use socha_client_base::{error::SCError, util::SCResult};
@@ -261,39 +260,5 @@ impl FromStr for PieceShape {
 impl fmt::Display for PieceShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
-    }
-}
-
-/// Serialized representation of a PieceShape.
-#[derive(Serialize, Deserialize)]
-struct PackedPieceShape {
-    #[serde(rename = "$value")]
-    raw: String
-}
-
-impl From<PieceShape> for PackedPieceShape {
-    fn from(piece_shape: PieceShape) -> Self {
-        Self { raw: piece_shape.to_string() }
-    }
-}
-
-impl TryFrom<PackedPieceShape> for PieceShape {
-    type Error = SCError;
-
-    fn try_from(packed: PackedPieceShape) -> Result<Self, SCError> {
-        Self::from_str(packed.raw)
-    }
-}
-
-impl Serialize for PieceShape {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        PackedPieceShape::from(self).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for PieceShape {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        PackedPieceShape::deserialize(deserializer)
-            .and_then(|p| Self::try_from(p).map_err(|e| D::Error::custom(format!("Could not deserialize color: {:?}", e))))
     }
 }

@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 use serde::{Serialize, Deserialize};
 use crate::util::CubeCoords;
 
@@ -57,3 +59,10 @@ impl Fields {
         self.fields.iter_mut()
     }
 }
+
+impl FromIterator<Field> for Fields {
+    fn from_iter<T>(iter: T) -> Self where T: IntoIterator<Item = Field> {
+        Self { fields: Vec::from_iter(iter) }
+    }
+}
+

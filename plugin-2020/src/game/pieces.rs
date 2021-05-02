@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 use serde::{Serialize, Deserialize};
 use super::Piece;
 
@@ -27,5 +29,11 @@ impl Pieces {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item=&Piece> {
         self.pieces.iter()
+    }
+}
+
+impl FromIterator<Piece> for Pieces {
+    fn from_iter<T>(iter: T) -> Self where T: IntoIterator<Item = Piece> {
+        Self { pieces: Vec::from_iter(iter) }
     }
 }

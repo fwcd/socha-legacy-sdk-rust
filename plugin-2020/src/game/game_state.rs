@@ -1,6 +1,6 @@
 use log::trace;
 use serde::{Serialize, Deserialize};
-use socha_client_base::{util::HasOpponent, util::SCResult};
+use socha_client_base::util::{HasOpponent, SCResult, serde_as_str};
 use crate::util::{Adjacentable, AxialCoords, LineFormable};
 use super::{Board, INITIAL_PIECE_TYPES, Move, Piece, Pieces, PieceType, Player, PlayerColor};
 
@@ -11,7 +11,9 @@ use super::{Board, INITIAL_PIECE_TYPES, Move, Piece, Pieces, PieceType, Player, 
 #[serde(rename_all = "camelCase")]
 pub struct GameState {
     pub turn: u32,
+    #[serde(with = "serde_as_str")]
     pub start_player_color: PlayerColor,
+    #[serde(with = "serde_as_str")]
     pub current_player_color: PlayerColor,
     pub board: Board,
     red: Player,

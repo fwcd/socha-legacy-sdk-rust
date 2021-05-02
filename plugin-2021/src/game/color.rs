@@ -1,5 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
-use std::{convert::TryFrom, fmt, str::FromStr};
+use std::{fmt, str::FromStr};
 
 use socha_client_base::{error::SCError, util::SCResult};
 
@@ -68,39 +67,5 @@ impl fmt::Display for Color {
             Self::Green => write!(f, "GREEN"),
             Self::None => write!(f, "NONE")
         }
-    }
-}
-
-/// Serialized representation of a color.
-#[derive(Serialize, Deserialize)]
-struct PackedColor {
-    #[serde(rename = "$value")]
-    raw: String
-}
-
-impl From<Color> for PackedColor {
-    fn from(color: Color) -> Self {
-        Self { raw: color.to_string() }
-    }
-}
-
-impl TryFrom<PackedColor> for Color {
-    type Error = SCError;
-
-    fn try_from(packed: PackedColor) -> Result<Self, SCError> {
-        Self::from_str(packed.raw)
-    }
-}
-
-impl Serialize for Color {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        PackedColor::from(self).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for Color {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        PackedColor::deserialize(deserializer)
-            .and_then(|p| Self::try_from(p).map_err(|e| D::Error::custom(format!("Could not deserialize color: {:?}", e))))
     }
 }
