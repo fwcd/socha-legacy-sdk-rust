@@ -185,7 +185,7 @@ impl Board {
     /// Tests whether the given field can be reached in 3 moves
     /// by breadth-first searching the accessible fields.
     pub fn bfs_reachable_in_3_steps(&self, start: AxialCoords, destination: AxialCoords) -> bool {
-        let mut paths_queue: VecDeque<ArrayVec<[AxialCoords; 3]>> = VecDeque::new();
+        let mut paths_queue: VecDeque<ArrayVec<AxialCoords, 3>> = VecDeque::new();
         paths_queue.push_back({
             let mut path = ArrayVec::new();
             path.push(start);

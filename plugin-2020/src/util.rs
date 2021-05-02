@@ -93,7 +93,7 @@ impl AxialCoords {
     /// Fetches all 6 neighbors, regardless of any board
     /// boundaries.
     #[inline]
-    pub fn coord_neighbors(self) -> ArrayVec<[AxialCoords; 6]> {
+    pub fn coord_neighbors(self) -> ArrayVec<AxialCoords, 6> {
         ArrayVec::from([
             self + AxialCoords::new(0, 1),
             self + AxialCoords::new(1, 0),
