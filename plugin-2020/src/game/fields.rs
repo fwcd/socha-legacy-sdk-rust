@@ -15,7 +15,11 @@ impl Fields {
         Self { fields: Vec::new() }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=Field> {
+    pub fn len(&self) -> usize {
+        self.fields.len()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=&Field> {
         self.fields.iter()
     }
 }

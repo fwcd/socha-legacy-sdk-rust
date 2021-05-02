@@ -1,23 +1,23 @@
 use log::trace;
-use socha_client_base::{util::HasOpponent, util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
-
+use serde::{Serialize, Deserialize};
+use socha_client_base::{util::HasOpponent, util::SCResult};
 use crate::util::{Adjacentable, AxialCoords, LineFormable};
-
-use super::{Board, INITIAL_PIECE_TYPES, Move, Piece, PieceType, Player, PlayerColor, PositionedField};
+use super::{Board, INITIAL_PIECE_TYPES, Move, Piece, Pieces, PieceType, Player, PlayerColor};
 
 /// A snapshot of the game's state at
 /// a specific turn. Consists of the
 /// board and information about both players.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GameState {
     pub turn: u32,
     pub start_player_color: PlayerColor,
     pub current_player_color: PlayerColor,
     pub board: Board,
-    red_player: Player,
-    blue_player: Player,
-    undeployed_red_pieces: Vec<Piece>,
-    undeployed_blue_pieces: Vec<Piece>
+    red: Player,
+    blue: Player,
+    undeployed_red_pieces: Pieces,
+    undeployed_blue_pieces: Pieces
 }
 
 impl GameState {
@@ -32,8 +32,8 @@ impl GameState {
     /// Fetches the player data for a given color.
     pub fn player(&self, color: PlayerColor) -> &Player {
         match color {
-            PlayerColor::Red => &self.red_player,
-            PlayerColor::Blue => &self.blue_player
+            PlayerColor::Red => &self.red,
+            PlayerColor::Blue => &self.blue
         }
     } 
 
@@ -225,20 +225,5 @@ impl GameState {
         let mut moves = self.possible_set_moves(color);
         moves.extend(self.possible_drag_moves(color));
         moves
-    }
-}
-
-impl FromXmlNode for GameState {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self {
-            turn: node.attribute("turn")?.parse()?,
-            start_player_color: node.attribute("startPlayerColor")?.parse()?,
-            current_player_color: node.attribute("currentPlayerColor")?.parse()?,
-            red_player: Player::from_node(node.child_by_name("red")?)?,
-            blue_player: Player::from_node(node.child_by_name("blue")?)?,
-            board: Board::from_node(node.child_by_name("board")?)?,
-            undeployed_red_pieces: node.child_by_name("undeployedRedPieces")?.childs_by_name("piece").map(Piece::from_node).collect::<Result<_, _>>()?,
-            undeployed_blue_pieces: node.child_by_name("undeployedBluePieces")?.childs_by_name("piece").map(Piece::from_node).collect::<Result<_, _>>()?
-        })
     }
 }

@@ -9,9 +9,9 @@ mod r#move;
 mod game_state;
 mod piece_type;
 mod piece;
+mod pieces;
 mod player_color;
 mod player;
-mod positioned_field;
 
 pub use board::*;
 pub use constants::*;
@@ -21,6 +21,6 @@ pub use r#move::*;
 pub use game_state::*;
 pub use piece_type::*;
 pub use piece::*;
+pub use pieces::*;
 pub use player_color::*;
 pub use player::*;
-pub use positioned_field::*;

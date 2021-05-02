@@ -1,5 +1,5 @@
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{convert::TryFrom, str::FromStr};
-
 use socha_client_base::{error::SCError, util::HasOpponent, util::SCResult};
 
 /// A player color in the game.
@@ -57,5 +57,18 @@ impl From<PlayerColor> for String {
             PlayerColor::Red => "RED",
             PlayerColor::Blue => "BLUE"
         }.to_owned()
+    }
+}
+
+impl Serialize for PlayerColor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_str(String::from(*self).as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for PlayerColor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        Self::from_str(String::deserialize(deserializer)?.as_str())
+            .map_err(|e| D::Error::custom(format!("Could not deserialize player color: {:?}", e)))
     }
 }

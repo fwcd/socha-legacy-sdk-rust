@@ -4,9 +4,9 @@ use arrayvec::ArrayVec;
 use itertools::Itertools;
 use log::{debug, trace};
 use socha_client_base::{util::HasOpponent, util::SCResult};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
-use crate::util::{AxialCoords, CubeCoords, DoubledCoords};
+use crate::util::{AxialCoords, DoubledCoords};
 
 use super::{Field, Fields, Piece, PieceType, PlayerColor};
 
@@ -365,22 +365,5 @@ impl fmt::Display for Board {
         }
 
         Ok(())
-    }
-}
-
-impl FromXmlNode for Board {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self::filling_radius(6, node.childs_by_name("fields")
-            .flat_map(|child| child.childs_by_name("field")
-                .map(|f| Ok((
-                    CubeCoords::new(
-                        f.attribute("x")?.parse()?,
-                        f.attribute("y")?.parse()?,
-                        f.attribute("z")?.parse()?
-                    ).into(),
-                    Field::from_node(f)?
-                ))))
-            .collect::<SCResult<HashMap<AxialCoords, Field>>>()?
-        ))
     }
 }
