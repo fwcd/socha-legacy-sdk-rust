@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, fmt};
+use std::{convert::TryFrom, fmt, iter::empty};
 
 use regex::Regex;
 use serde::{Serialize, Deserialize};
@@ -39,6 +39,11 @@ impl Field {
             pieces: pieces.into_iter().collect(),
             is_obstructed
         }
+    }
+
+    /// Creates a new field at the given position.
+    pub fn from_coords(coords: impl Into<CubeCoords>) -> Self {
+        Self::new(coords, empty(), false)
     }
 
     /// Converts a field in a two-character notation

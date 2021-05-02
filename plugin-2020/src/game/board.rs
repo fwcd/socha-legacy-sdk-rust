@@ -288,3 +288,53 @@ impl fmt::Display for Board {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::iter::once;
+    use super::Board;
+    use crate::game::{Field, Piece, PieceType, PlayerColor};
+    use crate::util::AxialCoords;
+
+    macro_rules! assert_unordered_eq {
+        ($a:expr, $b:expr) => {
+            assert_eq!(
+                $a.into_iter().collect::<::std::collections::HashSet<_>>(),
+                $b.into_iter().collect::<::std::collections::HashSet<_>>()
+            )
+        };
+    }
+
+    #[test]
+    fn test_filled_grid() {
+        let mut board = Board::from_radius(3);
+        assert_eq!(board.fields().count(), 17);
+
+        board.field_mut(AxialCoords::new(0, 0)).unwrap().push(Piece::new(PlayerColor::Red, PieceType::Grasshopper));
+        board.field_mut(AxialCoords::new(0, 1)).unwrap().push(Piece::new(PlayerColor::Red, PieceType::Bee));
+        board.field_mut(AxialCoords::new(1, 0)).unwrap().push(Piece::new(PlayerColor::Blue, PieceType::Ant));
+        board.field_mut(AxialCoords::new(2, -1)).unwrap().push(Piece::new(PlayerColor::Blue, PieceType::Ant));
+        assert!(board.has_pieces());
+
+        assert_unordered_eq!(board.fields_owned_by(PlayerColor::Red).cloned(), vec![
+            Field::new(AxialCoords::new(0, 0), once(Piece {
+                piece_type: PieceType::Grasshopper,
+                owner: PlayerColor::Red
+            }), false),
+            Field::new(AxialCoords::new(0, 1), once(Piece {
+                piece_type: PieceType::Bee,
+                owner: PlayerColor::Red
+            }), false)
+        ]);
+        assert_unordered_eq!(board.fields_owned_by(PlayerColor::Blue).cloned(), vec![
+            Field::new(AxialCoords::new(1, 0), once(Piece {
+                piece_type: PieceType::Ant,
+                owner: PlayerColor::Blue
+            }), false),
+            Field::new(AxialCoords::new(2, -1), once(Piece {
+                piece_type: PieceType::Ant,
+                owner: PlayerColor::Blue
+            }), false)
+        ]);
+    }
+}
