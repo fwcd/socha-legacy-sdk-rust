@@ -1,6 +1,8 @@
-use std::str::FromStr;
+use serde::{Serialize, Deserialize};
+use std::{fmt, str::FromStr};
 
 use crate::error::SCError;
+use crate::util::serde_as_wrapped_value;
 
 use super::{SCPlugin, HasPlayerColor, HasOpponent, HasTurn};
 
@@ -16,14 +18,19 @@ pub enum MockPlayerColor {
 }
 
 /// A mock player for testing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MockPlayer;
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockPlayer {
+    #[serde(with = "serde_as_wrapped_value")]
+    pub color: MockPlayerColor,
+    pub display_name: String,
+}
 
 /// A mock game state for testing.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MockGameState {
-    player_color: MockPlayerColor,
-    turn: u32,
+    pub player_color: MockPlayerColor,
+    pub turn: u32,
 }
 
 /// A mock move for testing.
@@ -47,6 +54,15 @@ impl FromStr for MockPlayerColor {
             "RED" => Ok(Self::Red),
             "BLUE" => Ok(Self::Blue),
             _ => Err(SCError::Custom(format!("Invalid mock player color: {}", s))),
+        }
+    }
+}
+
+impl fmt::Display for MockPlayerColor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Red => write!(f, "RED"),
+            Self::Blue => write!(f, "BLUE"),
         }
     }
 }

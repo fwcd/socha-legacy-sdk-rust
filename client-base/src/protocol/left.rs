@@ -14,6 +14,7 @@ mod tests {
 
     #[test]
     fn test_serialization() {
+        // See https://cau-kiel-tech-inf.github.io/socha-enduser-docs/spiele/blokus/_spiel_verlassen.html
         assert_eq!(
             to_string(&super::Left { room_id: "42".to_owned() }).unwrap().as_str(),
             r#"<left roomId="42"/>"#

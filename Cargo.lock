@@ -142,6 +142,7 @@ dependencies = [
 name = "socha-client-base"
 version = "0.1.0"
 dependencies = [
+ "indoc",
  "log",
  "quick-xml",
  "serde",
