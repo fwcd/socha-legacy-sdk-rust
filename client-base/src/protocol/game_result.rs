@@ -1,21 +1,12 @@
-use crate::{plugin::SCPlugin, util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
-
+use serde::{Serialize, Deserialize};
 use super::{PlayerScore, ScoreDefinition};
 
 /// The final result of a game.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GameResult<P> where P: SCPlugin {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GameResult<P> {
     pub definition: ScoreDefinition,
+    #[serde(rename = "score")]
     pub scores: Vec<PlayerScore>,
-    pub winners: Vec<P::Player>
-}
-
-impl<P> FromXmlNode for GameResult<P> where P: SCPlugin, P::Player: FromXmlNode {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self {
-            definition: ScoreDefinition::from_node(node.child_by_name("definition")?)?,
-            scores: node.childs_by_name("score").map(PlayerScore::from_node).collect::<SCResult<_>>()?,
-            winners: node.childs_by_name("winner").map(P::Player::from_node).collect::<SCResult<_>>()?
-        })
-    }
+    #[serde(rename = "winner")]
+    pub winners: Vec<P>,
 }

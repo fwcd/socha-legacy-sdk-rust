@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use std::str::FromStr;
 use std::fmt::Debug;
 use crate::xml_node::{FromXmlNode, XmlNode};

@@ -1,32 +1,15 @@
-use std::convert::TryFrom;
-
-use crate::{error::SCError, plugin::SCPlugin, util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
-
+use serde::{Serialize, Deserialize};
+use crate::plugin::SCPlugin;
 use super::Data;
 
 /// A message in a room together with some data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Room<P> where P: SCPlugin {
     pub room_id: String,
+    #[serde(bound(
+        serialize = "P::Player: Serialize, P::Move: Serialize, P::PlayerColor: Serialize, P::GameState: Serialize",
+        deserialize = "P::Player: Deserialize<'de>, P::Move: Deserialize<'de>, P::PlayerColor: Deserialize<'de>, P::GameState: Deserialize<'de>"
+    ))]
     pub data: Data<P>
-}
-
-impl<P> FromXmlNode for Room<P> where P: SCPlugin {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self {
-            room_id: node.attribute("roomId")?.to_owned(),
-            data: <Data<P>>::from_node(node.child_by_name("data")?)?
-        })
-    }
-}
-
-impl<P> TryFrom<Room<P>> for XmlNode where P: SCPlugin {
-    type Error = SCError;
-
-    fn try_from(room: Room<P>) -> SCResult<XmlNode> {
-        Ok(XmlNode::new("room")
-            .attribute("roomId", room.room_id)
-            .try_child(room.data)?
-            .into())
-    }
 }
