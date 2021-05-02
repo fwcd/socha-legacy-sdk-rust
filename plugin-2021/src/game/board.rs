@@ -1,13 +1,14 @@
-use socha_client_base::{util::SCResult, xml_node::{FromXmlNode, XmlNode}};
+use serde::{Serialize, Deserialize};
 
 use super::{CORNERS, Color, Vec2, Corner, Field, Piece};
 
 pub const BOARD_SIZE: usize = 20;
 
 /// The game board is a 20x20 grid of fields with colors.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Board {
     // TODO: More efficient representation, e.g. using a 2D matrix of colors
+    #[serde(rename = "field")]
     fields: Vec<Field>
 }
 
@@ -106,13 +107,5 @@ impl Board {
             Vec2::new(-1, 1),
             Vec2::new(1, -1)
         ].iter().any(|&o| self.get(position + o) == color)
-    }
-}
-
-impl FromXmlNode for Board {
-    fn from_node(node: &XmlNode) -> SCResult<Self> {
-        Ok(Self {
-            fields: node.childs_by_name("field").map(Field::from_node).collect::<Result<_, _>>()?
-        })
     }
 }
