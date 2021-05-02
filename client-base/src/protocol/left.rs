@@ -17,4 +17,3 @@ mod tests {
         assert_eq!(to_string(&super::Left { room_id: "42".to_owned() }).unwrap().as_str(), r#"<left roomId="42"/>"#);
     }
 }
-

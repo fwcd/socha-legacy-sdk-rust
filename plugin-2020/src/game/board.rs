@@ -4,21 +4,17 @@ use arrayvec::ArrayVec;
 use itertools::Itertools;
 use log::{debug, trace};
 use socha_client_base::{util::HasOpponent, util::SCResult};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::util::{AxialCoords, CubeCoords, DoubledCoords};
 
-use super::{Field, Piece, PieceType, PlayerColor};
+use super::{Field, Fields, Piece, PieceType, PlayerColor};
 
 /// The game board which is a symmetric hex grid with
 /// a side length of 6 fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Board {
-    // TODO: Store fields contiguously in a Vec
-    // or ideally a fixed-size container such
-    // as an array or an ArrayVec.
-    // and convert between coords and indices
-    fields: HashMap<AxialCoords, Field>
+    fields: Fields
 }
 
 impl Board {
