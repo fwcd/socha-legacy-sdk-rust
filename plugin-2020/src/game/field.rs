@@ -33,9 +33,9 @@ impl Field {
     pub fn new(coords: impl Into<CubeCoords>, pieces: impl IntoIterator<Item=Piece>, is_obstructed: bool) -> Self {
         let cube_coords = coords.into();
         Self {
-            x: cube_coords.x(),
-            y: cube_coords.y(),
-            z: cube_coords.z(),
+            x: cube_coords.x,
+            y: cube_coords.y,
+            z: cube_coords.z,
             pieces: pieces.into_iter().collect(),
             is_obstructed
         }

@@ -2,6 +2,7 @@
 //! hexagonal grids.
 
 use arrayvec::ArrayVec;
+use serde::{Serialize, Deserialize};
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div};
 use std::collections::HashMap;
 use std::fmt;
@@ -11,10 +12,10 @@ use socha_client_base::hashmap;
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-axial
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct AxialCoords {
-    x: i32,
-    y: i32
+    pub x: i32,
+    pub y: i32
 }
 
 /// Cube coordinates on the hex grid.
@@ -22,11 +23,11 @@ pub struct AxialCoords {
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-cube
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CubeCoords {
-    x: i32,
-    y: i32,
-    z: i32
+    pub x: i32,
+    pub y: i32,
+    pub z: i32
 }
 
 /// Offset coordinates with a doubled vertical
@@ -54,10 +55,10 @@ pub struct CubeCoords {
 /// 
 /// See https://www.redblobgames.com/grids/hexagons/#coordinates-doubled
 /// for a description.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DoubledCoords {
-    x: i32,
-    y: i32
+    pub x: i32,
+    pub y: i32
 }
 
 /// An iterator that returns coordinates on
@@ -87,16 +88,8 @@ pub trait Adjacentable {
 impl AxialCoords {
     /// Creates new axial coordinates.
     #[inline]
-    pub fn new(x: i32, y: i32) -> Self { Self { x: x, y: y } }
+    pub fn new(x: i32, y: i32) -> Self { Self { x, y } }
     
-    /// Fetches the x-coordinate
-    #[inline]
-    pub fn x(self) -> i32 { self.x }
-    
-    /// Fetches the y-coordinate
-    #[inline]
-    pub fn y(self) -> i32 { self.y }
-
     /// Fetches all 6 neighbors, regardless of any board
     /// boundaries.
     #[inline]
@@ -116,46 +109,26 @@ impl CubeCoords {
     /// Creates new (unvalidated) cube coordinates.
     #[inline]
     pub fn new(x: i32, y: i32, z: i32) -> Self {
-        Self { x: x, y: y, z: z }
+        Self { x, y, z }
     }
 
     /// Creates new cube coordinates if they are valid.
     #[inline]
     pub fn new_valid(x: i32, y: i32, z: i32) -> Option<Self> {
         if (x + y + z) == 0 {
-            Some(CubeCoords { x: x, y: y, z: z })
+            Some(CubeCoords { x, y, z })
         } else {
             None
         }
     }
-    
-    /// Fetches the x-coordinate
-    #[inline]
-    pub fn x(self) -> i32 { self.x }
-    
-    /// Fetches the y-coordinate
-    #[inline]
-    pub fn y(self) -> i32 { self.y }
-    
-    /// Fetches the z-coordinate
-    #[inline]
-    pub fn z(self) -> i32 { self.z }
 }
 
 impl DoubledCoords {
     /// Creates new doubled coordinates.
     #[inline]
     pub fn new(x: i32, y: i32) -> Self {
-        Self { x: x, y: y }
+        Self { x, y }
     }
-
-    /// Fetches the x-coordinate
-    #[inline]
-    pub fn x(self) -> i32 { self.x }
-    
-    /// Fetches the y-coordinate
-    #[inline]
-    pub fn y(self) -> i32 { self.y }
 }
 
 impl fmt::Display for AxialCoords {
@@ -187,7 +160,7 @@ impl<C> LineFormable for C where C: Into<CubeCoords> {
         let lhs_cube = self.into();
         let rhs_cube = rhs.into();
         let diff = rhs_cube - lhs_cube;
-        let step = CubeCoords::new(diff.x().signum(), diff.y().signum(), diff.z().signum());
+        let step = CubeCoords::new(diff.x.signum(), diff.y.signum(), diff.z.signum());
         LineIter::new(lhs_cube + step, step, rhs_cube)
     }
 }

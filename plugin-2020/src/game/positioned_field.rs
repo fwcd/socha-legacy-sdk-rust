@@ -19,9 +19,9 @@ impl<'a, C> From<PositionedField<C>> for XmlNodeBuilder<'a> where C: Into<CubeCo
         let cube_coords = field.coords.into();
         XmlNodeBuilder::default()
             .attribute("class", "field")
-            .attribute("x", cube_coords.x().to_string())
-            .attribute("y", cube_coords.y().to_string())
-            .attribute("z", cube_coords.z().to_string())
+            .attribute("x", cube_coords.x.to_string())
+            .attribute("y", cube_coords.y.to_string())
+            .attribute("z", cube_coords.z.to_string())
             .attribute("isObstructed", field.field.is_obstructed().to_string())
             .childs(field.field.piece_stack().iter().map(|&p| XmlNode::from(p)))
     }

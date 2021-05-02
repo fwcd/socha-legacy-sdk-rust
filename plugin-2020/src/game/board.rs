@@ -110,8 +110,8 @@ impl Board {
                 )))
             .collect();
         let center = DoubledCoords::new(
-            double_positioned.iter().map(|(c, _)| c.x()).max().unwrap_or(0),
-            double_positioned.iter().map(|(c, _)| c.y()).max().unwrap_or(0)
+            double_positioned.iter().map(|(c, _)| c.x).max().unwrap_or(0),
+            double_positioned.iter().map(|(c, _)| c.y).max().unwrap_or(0)
         ) / 2;
         debug!("Determined center at {:?}", center);
         debug!("Parsed fields at {:?}", double_positioned.iter().map(|(c, _)| *c - center).collect::<Vec<_>>());
@@ -348,10 +348,10 @@ impl Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let min_x = self.fields().map(|(c, _)| c.x()).min().ok_or(fmt::Error)?;
-        let min_y = self.fields().map(|(c, _)| c.y()).min().ok_or(fmt::Error)?;
-        let max_x = self.fields().map(|(c, _)| c.x()).max().ok_or(fmt::Error)?;
-        let max_y = self.fields().map(|(c, _)| c.y()).max().ok_or(fmt::Error)?;
+        let min_x = self.fields().map(|(c, _)| c.x).min().ok_or(fmt::Error)?;
+        let min_y = self.fields().map(|(c, _)| c.y).min().ok_or(fmt::Error)?;
+        let max_x = self.fields().map(|(c, _)| c.x).max().ok_or(fmt::Error)?;
+        let max_y = self.fields().map(|(c, _)| c.y).max().ok_or(fmt::Error)?;
 
         for y in min_y..=max_y {
             for x in min_x..=max_x {

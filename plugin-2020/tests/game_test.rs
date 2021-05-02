@@ -81,7 +81,7 @@ fn test_filling_radius() {
     let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
     assert_eq!(board.fields().count(), FIELD_COUNT);
     for coords in board.fields().map(|(c, _)| CubeCoords::from(c)) {
-        assert_eq!(coords.x() + coords.y() + coords.z(), 0);
+        assert_eq!(coords.x + coords.y + coords.z, 0);
     }
 }
 
@@ -110,8 +110,8 @@ fn neighbors_in_bounds() {
     let board = Board::filling_radius(BOARD_RADIUS, HashMap::new());
     let radius = i32::try_from(BOARD_RADIUS).unwrap();
     for coords in board.fields().flat_map(|(c, _)| board.neighbors(c)).map(|(c, _)| CubeCoords::from(c)) {
-        assert_lt!(coords.x().abs(), radius);
-        assert_lt!(coords.y().abs(), radius);
-        assert_lt!(coords.z().abs(), radius);
+        assert_lt!(coords.x.abs(), radius);
+        assert_lt!(coords.y.abs(), radius);
+        assert_lt!(coords.z.abs(), radius);
     }
 }
