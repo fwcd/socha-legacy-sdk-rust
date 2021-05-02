@@ -73,7 +73,7 @@ impl Board {
         // TODO: This is very inefficient and would be much better handled using a matrix
         match self.fields.iter_mut().find(|f| f.position == position) {
             Some(field) => field.content = color,
-            None => self.fields.push(Field { position, content: color })
+            None => self.fields.push(Field::new(position, color))
         }
     }
 

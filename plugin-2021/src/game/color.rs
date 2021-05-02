@@ -75,12 +75,12 @@ impl fmt::Display for Color {
 #[derive(Serialize, Deserialize)]
 struct PackedColor {
     #[serde(rename = "$value")]
-    color: String
+    raw: String
 }
 
 impl From<Color> for PackedColor {
     fn from(color: Color) -> Self {
-        Self { color: color.to_string() }
+        Self { raw: color.to_string() }
     }
 }
 
@@ -88,7 +88,7 @@ impl TryFrom<PackedColor> for Color {
     type Error = SCError;
 
     fn try_from(packed: PackedColor) -> Result<Self, SCError> {
-        Self::from_str(packed.color)
+        Self::from_str(packed.raw)
     }
 }
 
@@ -101,6 +101,6 @@ impl Serialize for Color {
 impl<'de> Deserialize<'de> for Color {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
         PackedColor::deserialize(deserializer)
-            .and_then(|p| Color::try_from(p).map_err(|e| D::Error::custom(format!("Could not deserialize color: {:?}", e))))
+            .and_then(|p| Self::try_from(p).map_err(|e| D::Error::custom(format!("Could not deserialize color: {:?}", e))))
     }
 }

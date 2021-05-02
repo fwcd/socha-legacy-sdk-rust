@@ -1,9 +1,10 @@
-use socha_client_base::{util::SCResult, xml_node::FromXmlNode, xml_node::XmlNode};
+use serde::{Serialize, Deserialize};
+use socha_client_base::{util::SCResult};
 
 use super::{Color, Vec2, PieceShape, Rotation};
 
 /// A game piece with color, position and transformed form.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Piece {
     /// The piece's untransformed shape
     pub kind: PieceShape,
