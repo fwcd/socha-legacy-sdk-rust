@@ -3,7 +3,8 @@ use std::{cmp::max, cmp::min, collections::HashMap, collections::HashSet, collec
 use arrayvec::ArrayVec;
 use itertools::Itertools;
 use log::{debug, trace};
-use socha_client_base::{util::HasOpponent, util::SCResult, xml_node::{FromXmlNode, XmlNode}};
+use socha_client_base::{util::HasOpponent, util::SCResult};
+use serde::{Serialize, Deserialize};
 
 use crate::util::{AxialCoords, CubeCoords, DoubledCoords};
 

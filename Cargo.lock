@@ -136,7 +136,6 @@ dependencies = [
  "log",
  "quick-xml",
  "serde",
- "xml-rs",
 ]
 
 [[package]]
@@ -149,6 +148,7 @@ dependencies = [
  "log",
  "more-asserts",
  "regex",
+ "serde",
  "socha-client-base",
 ]
 
@@ -189,9 +189,3 @@ name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
-
-[[package]]
-name = "xml-rs"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "541b12c998c5b56aa2b4e6f18f03664eef9a4fd0a246a55594efae6cc2d964b5"
