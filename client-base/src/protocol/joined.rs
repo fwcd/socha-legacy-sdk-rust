@@ -7,3 +7,13 @@ use serde::{Serialize, Deserialize};
 pub struct Joined {
     pub room_id: String
 }
+
+#[cfg(test)]
+mod tests {
+    use quick_xml::se::to_string;
+
+    #[test]
+    fn test_serialize() {
+        assert_eq!(to_string(&super::Joined { room_id: "42".to_owned() }).unwrap().as_str(), r#"<joined roomId="42"/>"#);
+    }
+}
