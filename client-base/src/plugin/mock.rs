@@ -7,7 +7,7 @@ use crate::util::serde_as_wrapped_value;
 use super::{SCPlugin, HasPlayerColor, HasOpponent, HasTurn};
 
 /// A mock implementation of a plugin for testing.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MockPlugin;
 
 /// A mock player color for testing.
@@ -27,14 +27,16 @@ pub struct MockPlayer {
 }
 
 /// A mock game state for testing.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MockGameState {
+    #[serde(with = "serde_as_wrapped_value")]
     pub player_color: MockPlayerColor,
     pub turn: u32,
 }
 
 /// A mock move for testing.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MockMove;
 
 impl SCPlugin for MockPlugin {

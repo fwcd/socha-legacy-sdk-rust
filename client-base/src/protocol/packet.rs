@@ -1,3 +1,4 @@
+use std::{fmt, str::FromStr};
 use serde::{Serialize, Deserialize};
 use crate::plugin::SCPlugin;
 use super::{Room, Joined, Left, Close};
@@ -7,8 +8,8 @@ use super::{Room, Joined, Left, Close};
 #[serde(untagged)]
 pub enum Packet<P> where P: SCPlugin {
     #[serde(bound(
-        serialize = "P::Player: Serialize, P::Move: Serialize, P::PlayerColor: Serialize, P::GameState: Serialize",
-        deserialize = "P::Player: Deserialize<'de>, P::Move: Deserialize<'de>, P::PlayerColor: Deserialize<'de>, P::GameState: Deserialize<'de>"
+        serialize = "P::Player: Serialize, P::Move: Serialize, P::PlayerColor: fmt::Display, P::GameState: Serialize",
+        deserialize = "P::Player: Deserialize<'de>, P::Move: Deserialize<'de>, P::PlayerColor: FromStr, P::GameState: Deserialize<'de>"
     ))]
     Room(Room<P>),
     Joined(Joined),

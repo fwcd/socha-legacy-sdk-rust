@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::net::TcpStream;
+use std::{fmt, net::TcpStream, str::FromStr};
 use std::io::{self, BufWriter, BufReader, BufRead, Write};
 use log::{info, debug, warn, error};
 use quick_xml::{Reader as XmlReader, events::Event as XmlEvent};
@@ -51,7 +51,7 @@ pub struct SCClient<D> where D: SCClientDelegate {
 impl<D> SCClient<D>
     where
         D: SCClientDelegate,
-        <D::Plugin as SCPlugin>::PlayerColor: Serialize + for<'de> Deserialize<'de>,
+        <D::Plugin as SCPlugin>::PlayerColor: fmt::Display + FromStr,
         <D::Plugin as SCPlugin>::Player: Serialize + for<'de> Deserialize<'de>,
         <D::Plugin as SCPlugin>::GameState: Serialize + for<'de> Deserialize<'de>,
         <D::Plugin as SCPlugin>::Move: Serialize + for<'de> Deserialize<'de> {
@@ -152,7 +152,7 @@ impl<D> SCClient<D>
                             error!("Got move request, which cannot be fulfilled since no game state is present!");
                         }
                     },
-                    Event::Result(result) => {
+                    Event::Result { result } => {
                         info!("Got game result: {:?}", result);
                         self.delegate.on_game_end(result);
                     },
