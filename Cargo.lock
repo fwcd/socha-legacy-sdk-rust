@@ -160,6 +160,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "log",
+ "quick-xml",
  "regex",
  "serde",
  "socha-client-base",
