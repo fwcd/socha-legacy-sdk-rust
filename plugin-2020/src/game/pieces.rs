@@ -14,10 +14,17 @@ impl Pieces {
         Self { pieces: Vec::new() }
     }
 
+    #[inline]
     pub fn len(&self) -> usize {
         self.pieces.len()
     }
 
+    #[inline]
+    pub fn contains(&self, piece: &Piece) -> bool {
+        self.pieces.contains(piece)
+    }
+
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item=&Piece> {
         self.pieces.iter()
     }

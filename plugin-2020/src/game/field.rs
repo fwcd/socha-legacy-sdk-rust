@@ -6,7 +6,7 @@ use socha_client_base::{error::SCError, util::SCResult};
 use lazy_static::lazy_static;
 
 use super::{Piece, PieceType, PlayerColor};
-use crate::util::CubeCoords;
+use crate::util::{AxialCoords, CubeCoords, DoubledCoords};
 
 lazy_static! {
     /// The syntax used for fields when parsing
@@ -48,7 +48,7 @@ impl Field {
     /// 
     /// Obstructed fields and piece stacks are not (yet)
     /// supported.
-    fn from_short(coords: impl Into<CubeCoords>, raw: &str) -> SCResult<Self> {
+    pub fn from_short(coords: impl Into<CubeCoords>, raw: &str) -> SCResult<Self> {
         if raw.is_empty() {
             Ok(Self::new(coords, Vec::new(), false))
         } else {
@@ -62,6 +62,18 @@ impl Field {
 
     /// Fetches the coordinates of the field.
     pub fn coords<C>(&self) -> C where C: From<CubeCoords> { CubeCoords::new(self.x, self.y, self.z).into() }
+
+    /// Fetches the axial coordinates of the field.
+    #[inline]
+    pub fn axial_coords(&self) -> AxialCoords { self.coords() }
+
+    /// Fetches the cube coordinates of the field.
+    #[inline]
+    pub fn cube_coords(&self) -> CubeCoords { self.coords() }
+
+    /// Fetches the doubled coordinates of the field.
+    #[inline]
+    pub fn doubled_coords(&self) -> DoubledCoords { self.coords() }
 
     /// Fetches the player color "owning" the field.
     pub fn owner(&self) -> Option<PlayerColor> { self.piece().map(|p| p.owner) }

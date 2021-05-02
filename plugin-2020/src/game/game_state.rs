@@ -22,7 +22,7 @@ pub struct GameState {
 
 impl GameState {
     /// Fetches the undeployed pieces for a specific color.
-    pub fn undeployed_pieces(&self, color: PlayerColor) -> &Vec<Piece> {
+    pub fn undeployed_pieces(&self, color: PlayerColor) -> &Pieces {
         match color {
             PlayerColor::Red => &self.undeployed_red_pieces,
             PlayerColor::Blue => &self.undeployed_blue_pieces
@@ -145,8 +145,8 @@ impl GameState {
     //// Tests whether the given move is valid.
     pub fn validate_move(&self, color: PlayerColor, game_move: &Move) -> SCResult<()> {
         match game_move {
-            Move::SetMove { piece, destination } => self.validate_set_move(color, *piece, destination.coords),
-            Move::DragMove { start, destination } => self.validate_drag_move(color, start.coords, destination.coords)
+            Move::SetMove { piece, destination } => self.validate_set_move(color, *piece, destination.coords::<AxialCoords>()),
+            Move::DragMove { start, destination } => self.validate_drag_move(color, start.coords::<AxialCoords>(), destination.coords::<AxialCoords>())
         }
     }
     
@@ -173,13 +173,13 @@ impl GameState {
         };
 
         let destinations = destination_coords.into_iter()
-            .filter_map(|c| self.board.field(c).map(|f| PositionedField { coords: c, field: f.clone() }));
+            .filter_map(|c| self.board.field(c));
         trace!("Found SetMove destinations at {:#?}", destinations);
         
         if !self.board.has_placed_bee(color) && self.turn > 5 {
             trace!("Player has not placed bee yet, therefore placing it is the only valid move.");
             destinations
-                .map(|d| Move::SetMove {
+                .map(|&d| Move::SetMove {
                     piece: Piece { piece_type: PieceType::Bee, owner: color },
                     destination: d
                 })
@@ -201,18 +201,18 @@ impl GameState {
     fn possible_drag_moves(&self, color: PlayerColor) -> Vec<Move> {
         trace!("Finding possible DragMoves");
 
-        self.board.fields_owned_by(color).flat_map(|(start_coords, start_field)| {
+        self.board.fields_owned_by(color).flat_map(|start_field| {
             let mut targets: Vec<_> = self.board.swarm_boundary().collect();
 
             if start_field.piece().filter(|f| f.piece_type == PieceType::Beetle).is_some() {
-                targets.extend(self.board.neighbors(start_coords));
+                targets.extend(self.board.neighbors(start_field.coords()));
             }
             
-            trace!("Drag targets from {}: {:#?}", start_coords, targets);
+            trace!("Drag targets from {}: {:#?}", start_field.axial_coords(), targets);
             targets.into_iter()
-                .filter_map(move |(c, f)| self.validated(color, Move::DragMove {
-                    start: PositionedField { coords: start_coords, field: start_field.clone() },
-                    destination: PositionedField { coords: c, field: f.clone() }
+                .filter_map(move |f| self.validated(color, Move::DragMove {
+                    start: start_field,
+                    destination: f
                 }).ok())
         }).collect()
     }
