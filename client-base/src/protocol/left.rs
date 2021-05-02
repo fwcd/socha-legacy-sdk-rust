@@ -13,7 +13,10 @@ mod tests {
     use quick_xml::se::to_string;
 
     #[test]
-    fn test_serialize() {
-        assert_eq!(to_string(&super::Left { room_id: "42".to_owned() }).unwrap().as_str(), r#"<left roomId="42"/>"#);
+    fn test_serialization() {
+        assert_eq!(
+            to_string(&super::Left { room_id: "42".to_owned() }).unwrap().as_str(),
+            r#"<left roomId="42"/>"#
+        );
     }
 }
