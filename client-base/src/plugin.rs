@@ -1,7 +1,5 @@
-use serde::{Serialize, Deserialize};
 use std::str::FromStr;
 use std::fmt::Debug;
-use crate::xml_node::{FromXmlNode, XmlNode};
 use crate::util::HasOpponent;
 use crate::error::SCError;
 
@@ -9,9 +7,9 @@ use crate::error::SCError;
 /// which represent various parts of a game.
 pub trait SCPlugin: Debug {
     type PlayerColor: Copy + Debug + Eq + HasOpponent + FromStr<Err=SCError>;
-    type Player: Clone + Debug + Eq + FromXmlNode;
-    type GameState: Clone + Debug + Eq + FromXmlNode + HasPlayerColor<PlayerColor=Self::PlayerColor> + HasTurn;
-    type Move: Clone + Debug + Eq + Into<XmlNode>;
+    type Player: Clone + Debug + Eq;
+    type GameState: Clone + Debug + Eq + HasPlayerColor<PlayerColor=Self::PlayerColor> + HasTurn;
+    type Move: Clone + Debug + Eq;
     
     /// Fetches the 'gameType' used during
     /// the protocol handshake.
