@@ -24,17 +24,20 @@ impl Fields {
 
     #[inline]
     pub fn contains(&self, coords: impl Into<CubeCoords>) -> bool {
-        self.fields.iter().any(|f| f.cube_coords() == coords.into())
+        let cube_coords = coords.into();
+        self.fields.iter().any(|f| f.cube_coords() == cube_coords)
     }
 
     #[inline]
     pub fn get(&self, coords: impl Into<CubeCoords>) -> Option<&Field> {
-        self.fields.iter().find(|f| f.cube_coords() == coords.into())
+        let cube_coords = coords.into();
+        self.fields.iter().find(|f| f.cube_coords() == cube_coords)
     }
 
     #[inline]
     pub fn get_mut(&mut self, coords: impl Into<CubeCoords>) -> Option<&mut Field> {
-        self.fields.iter_mut().find(|f| f.cube_coords() == coords.into())
+        let cube_coords = coords.into();
+        self.fields.iter_mut().find(|f| f.cube_coords() == cube_coords)
     }
 
     #[inline]
