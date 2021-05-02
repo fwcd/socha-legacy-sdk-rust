@@ -1,5 +1,5 @@
-use std::iter::FromIterator;
-use socha_client_base::util::serde_as_wrapped_value_vec;
+use std::{collections::HashSet, iter::FromIterator};
+use socha_client_base::util::serde_as_wrapped_value_set;
 
 use serde::{Serialize, Deserialize};
 
@@ -9,13 +9,13 @@ use super::PieceShape;
 /// is serialized here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PieceShapes {
-    #[serde(rename = "shape", with = "serde_as_wrapped_value_vec")]
-    shapes: Vec<PieceShape>
+    #[serde(rename = "shape", with = "serde_as_wrapped_value_set")]
+    shapes: HashSet<PieceShape>
 }
 
 impl PieceShapes {
     pub fn new() -> Self {
-        Self { shapes: Vec::new() }
+        Self { shapes: HashSet::new() }
     }
 
     #[inline]
@@ -29,8 +29,8 @@ impl PieceShapes {
     }
 
     #[inline]
-    pub fn remove(&self, shape: PieceShape) -> bool {
-        todo!()
+    pub fn remove(&mut self, shape: &PieceShape) -> bool {
+        self.shapes.remove(shape)
     }
 
     #[inline]
@@ -41,6 +41,6 @@ impl PieceShapes {
 
 impl FromIterator<PieceShape> for PieceShapes {
     fn from_iter<T>(iter: T) -> Self where T: IntoIterator<Item = PieceShape> {
-        Self { shapes: Vec::from_iter(iter) }
+        Self { shapes: HashSet::from_iter(iter) }
     }
 }

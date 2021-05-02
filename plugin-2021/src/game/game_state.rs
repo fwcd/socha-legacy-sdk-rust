@@ -3,7 +3,7 @@ use std::iter::once;
 
 use socha_client_base::util::{SCResult, serde_as_wrapped_value};
 
-use super::{BOARD_SIZE, Board, CORNERS, Color, Colors, Move, PIECE_SHAPES, PIECE_SHAPES_BY_NAME, Piece, PieceShape, PieceShapes, Player, Team, Vec2};
+use super::{BOARD_SIZE, Board, CORNERS, Color, Colors, Move, PIECE_SHAPES, Piece, PieceShape, PieceShapes, Player, Team, Vec2};
 
 /// A snapshot of the game's state. It holds the
 /// information needed to compute the next move.
@@ -233,9 +233,9 @@ impl GameState {
         // TODO: Track deployed shapes
         
         // If this was the last piece for this color, remove it from the turn queue
-        if undeployed.is_empty() {
-            self.last_move_mono.insert(piece.color, piece.kind == PIECE_SHAPES_BY_NAME["MONO"]);
-        }
+        // if undeployed.is_empty() {
+        //     self.last_move_mono.insert(piece.color, piece.kind == PIECE_SHAPES_BY_NAME["MONO"]);
+        // }
 
         self.try_advance(1)?;
         Ok(())

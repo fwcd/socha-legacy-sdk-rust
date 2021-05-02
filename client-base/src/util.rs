@@ -55,7 +55,7 @@ pub mod serde_as_str {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 struct Wrap {
     #[serde(rename = "$value")]
     raw: String
@@ -83,7 +83,7 @@ pub mod serde_as_wrapped_value {
 /// A serde wrapper that uses the associated string-representation,
 /// however wrapped in an additional node that uses '$value' (representing
 /// the text between the XML tags) and wrapped in a vec.
-/// Can be used with `#[serde(with = "serde_as_wrapped_value")]`.
+/// Can be used with `#[serde(with = "serde_as_wrapped_value_vec")]`.
 pub mod serde_as_wrapped_value_vec {
     use std::{str::FromStr, fmt::Debug};
     use serde::{Serialize, Deserialize, Deserializer, Serializer, de::Error};
@@ -98,5 +98,26 @@ pub mod serde_as_wrapped_value_vec {
             .into_iter()
             .map(|raw: String| raw.parse().map_err(|e| D::Error::custom(format!("Could not parse string-based value: {:?}", e))))
             .collect::<Result<Vec<_>, _>>()
+    }
+}
+
+/// A serde wrapper that uses the associated string-representation,
+/// however wrapped in an additional node that uses '$value' (representing
+/// the text between the XML tags) and wrapped in a hash set.
+/// Can be used with `#[serde(with = "serde_as_wrapped_value_set")]`.
+pub mod serde_as_wrapped_value_set {
+    use std::{collections::HashSet, fmt::Debug, str::FromStr, hash::Hash};
+    use serde::{Serialize, Deserialize, Deserializer, Serializer, de::Error};
+    use super::Wrap;
+
+    pub fn serialize<S, T>(value: &HashSet<T>, serializer: S) -> Result<S::Ok, S::Error> where T: ToString, S: Serializer {
+        HashSet::serialize(&value.into_iter().map(|x| Wrap { raw: x.to_string() }).collect::<HashSet<_>>(), serializer)
+    }
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<HashSet<T>, D::Error> where T: FromStr + Eq + Hash, T::Err: Debug, D: Deserializer<'de> {
+        HashSet::<String>::deserialize(deserializer)?
+            .into_iter()
+            .map(|raw| raw.parse().map_err(|e| D::Error::custom(format!("Could not parse string-based value: {:?}", e))))
+            .collect::<Result<HashSet<_>, _>>()
     }
 }
