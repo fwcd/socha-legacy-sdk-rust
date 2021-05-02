@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn test_filled_grid() {
         let mut board = Board::from_radius(3);
-        assert_eq!(board.fields().count(), 17);
+        assert_eq!(board.fields().count(), 19);
 
         board.field_mut(AxialCoords::new(0, 0)).unwrap().push(Piece::new(PlayerColor::Red, PieceType::Grasshopper));
         board.field_mut(AxialCoords::new(0, 1)).unwrap().push(Piece::new(PlayerColor::Red, PieceType::Bee));

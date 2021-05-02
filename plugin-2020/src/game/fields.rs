@@ -44,8 +44,9 @@ impl Fields {
 
     #[inline]
     pub fn insert(&mut self, coords: impl Into<CubeCoords>) {
-        if !self.contains(coords) {
-            self.fields.push(Field::default());
+        let cube_coords = coords.into();
+        if !self.contains(cube_coords) {
+            self.fields.push(Field::from_coords(cube_coords));
         }
     }
 
