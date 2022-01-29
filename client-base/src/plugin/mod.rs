@@ -1,8 +1,8 @@
-mod has_player_color;
+mod has_team;
 mod has_turn;
 mod mock;
 
-pub use has_player_color::*;
+pub use has_team::*;
 pub use has_turn::*;
 pub use mock::*;
 
