@@ -117,7 +117,7 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-    use quick_xml::de::from_str;
+    use socha_client_base::quick_xml::de::from_str;
     use crate::game::{Color, Field, Vec2};
 
     use super::Board;

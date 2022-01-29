@@ -33,7 +33,7 @@ impl Move {
 mod tests {
     use super::Move;
     use crate::game::{Color, PIECE_SHAPES_BY_NAME, Piece, Rotation, Vec2};
-    use quick_xml::se::to_string;
+    use socha_client_base::quick_xml::se::to_string;
 
     #[test]
     fn test_serialization() {
