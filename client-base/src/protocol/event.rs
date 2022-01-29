@@ -13,8 +13,8 @@ use super::GameResult;
 #[serde(rename = "data", tag = "class", rename_all = "camelCase")]
 pub enum Event<P> where P: SCPlugin {
     WelcomeMessage {
-        #[serde(with = "serde_as_str", bound(serialize = "P::PlayerColor: fmt::Display", deserialize = "P::PlayerColor: FromStr"))]
-        color: P::PlayerColor 
+        #[serde(with = "serde_as_str", bound(serialize = "P::Team: fmt::Display", deserialize = "P::Team: FromStr"))]
+        color: P::Team 
     },
     Memento {
         state: P::GameState

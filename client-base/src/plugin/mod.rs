@@ -14,9 +14,9 @@ use crate::error::SCError;
 /// A "type family" trait that defines types
 /// which represent various parts of a game.
 pub trait SCPlugin: Debug {
-    type PlayerColor: Copy + Debug + Eq + HasOpponent + FromStr<Err=SCError>;
+    type Team: Copy + Debug + Eq + HasOpponent + FromStr<Err=SCError>;
     type Player: Clone + Debug + Eq;
-    type GameState: Clone + Debug + Eq + HasPlayerColor<PlayerColor=Self::PlayerColor> + HasTurn;
+    type GameState: Clone + Debug + Eq + HasTeam<Team=Self::Team> + HasTurn;
     type Move: Clone + Debug + Eq;
     
     /// Fetches the 'gameType' used during

@@ -2,17 +2,17 @@ use serde::{Serialize, Deserialize};
 use std::{fmt, str::FromStr};
 
 use crate::error::SCError;
-use crate::util::serde_as_wrapped_value;
+use crate::util::{serde_as_str, serde_as_wrapped_value};
 
-use super::{SCPlugin, HasPlayerColor, HasOpponent, HasTurn};
+use super::{SCPlugin, HasTeam, HasOpponent, HasTurn};
 
 /// A mock implementation of a plugin for testing.
 #[derive(Debug, PartialEq, Eq)]
 pub struct MockPlugin;
 
-/// A mock player color for testing.
+/// A mock team for testing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MockPlayerColor {
+pub enum MockTeam {
     Red,
     Blue,
 }
@@ -21,8 +21,8 @@ pub enum MockPlayerColor {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MockPlayer {
-    #[serde(with = "serde_as_wrapped_value")]
-    pub color: MockPlayerColor,
+    #[serde(with = "serde_as_str")]
+    pub team: MockTeam,
     pub display_name: String,
 }
 
@@ -31,7 +31,7 @@ pub struct MockPlayer {
 #[serde(rename_all = "camelCase")]
 pub struct MockGameState {
     #[serde(with = "serde_as_wrapped_value")]
-    pub player_color: MockPlayerColor,
+    pub team: MockTeam,
     pub turn: u32,
 }
 
@@ -40,7 +40,7 @@ pub struct MockGameState {
 pub struct MockMove;
 
 impl SCPlugin for MockPlugin {
-    type PlayerColor = MockPlayerColor;
+    type Team = MockTeam;
     type Player = MockPlayer;
     type GameState = MockGameState;
     type Move = MockMove;
@@ -48,7 +48,7 @@ impl SCPlugin for MockPlugin {
     fn protocol_game_type<'a>() -> &'a str { "mock" }
 }
 
-impl FromStr for MockPlayerColor {
+impl FromStr for MockTeam {
     type Err = SCError;
 
     fn from_str(s: &str) -> Result<Self, SCError> {
@@ -60,7 +60,7 @@ impl FromStr for MockPlayerColor {
     }
 }
 
-impl fmt::Display for MockPlayerColor {
+impl fmt::Display for MockTeam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Red => write!(f, "RED"),
@@ -69,7 +69,7 @@ impl fmt::Display for MockPlayerColor {
     }
 }
 
-impl HasOpponent for MockPlayerColor {
+impl HasOpponent for MockTeam {
     fn opponent(self) -> Self {
         match self {
             Self::Red => Self::Blue,
@@ -84,10 +84,10 @@ impl HasTurn for MockGameState {
     }
 }
 
-impl HasPlayerColor for MockGameState {
-    type PlayerColor = MockPlayerColor;
+impl HasTeam for MockGameState {
+    type Team = MockTeam;
 
-    fn player_color(&self) -> MockPlayerColor {
-        self.player_color
+    fn team(&self) -> MockTeam {
+        self.team
     }
 }

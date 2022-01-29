@@ -16,7 +16,7 @@ mod tests {
     use indoc::indoc;
     use quick_xml::de::from_str;
 
-    use crate::{plugin::{MockPlayer, MockPlayerColor}, protocol::{PlayerScore, ScoreAggregation, ScoreCause, ScoreDefinition, ScoreFragment}};
+    use crate::{plugin::{MockPlayer, MockTeam}, protocol::{PlayerScore, ScoreAggregation, ScoreCause, ScoreDefinition, ScoreFragment}};
 
     use super::GameResult;
 
@@ -43,9 +43,7 @@ mod tests {
                     <part>0</part>
                     <part>42</part>
                 </score>
-                <winner displayName="Alex">
-                    <color class="team">RED</color>
-                </winner>
+                <winner displayName="Alex" team="RED" />
             </data>
         "#};
         let result: GameResult<MockPlayer> = from_str(raw).unwrap();
@@ -78,7 +76,7 @@ mod tests {
                 ],
                 winners: vec![
                     MockPlayer {
-                        color: MockPlayerColor::Red,
+                        team: MockTeam::Red,
                         display_name: "Alex".to_owned()
                     }
                 ]

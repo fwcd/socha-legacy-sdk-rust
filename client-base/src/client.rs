@@ -6,7 +6,7 @@ use quick_xml::{Reader as XmlReader, events::Event as XmlEvent};
 use quick_xml::se::to_writer;
 use quick_xml::de::from_reader;
 use crate::util::SCResult;
-use crate::plugin::{SCPlugin, HasPlayerColor, HasTurn};
+use crate::plugin::{SCPlugin, HasTeam, HasTurn};
 use crate::protocol::{Packet, Joined, Left, Room, Event, GameResult};
 
 /// A handler that implements the game player's
@@ -25,11 +25,11 @@ pub trait SCClientDelegate {
     
     /// Invoked when the welcome message is received
     /// with the player's color.
-    fn on_welcome_message(&mut self, _color: &<Self::Plugin as SCPlugin>::PlayerColor) {}
+    fn on_welcome_message(&mut self, _color: &<Self::Plugin as SCPlugin>::Team) {}
     
     /// Requests a move from the delegate. This method
     /// should implement the "main" game logic.
-    fn request_move(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, my_color: <Self::Plugin as SCPlugin>::PlayerColor) -> <Self::Plugin as SCPlugin>::Move;
+    fn request_move(&mut self, state: &<Self::Plugin as SCPlugin>::GameState, my_color: <Self::Plugin as SCPlugin>::Team) -> <Self::Plugin as SCPlugin>::Move;
 }
 
 /// A configuration that determines whether
@@ -51,7 +51,7 @@ pub struct SCClient<D> where D: SCClientDelegate {
 impl<D> SCClient<D>
     where
         D: SCClientDelegate,
-        <D::Plugin as SCPlugin>::PlayerColor: fmt::Display + FromStr,
+        <D::Plugin as SCPlugin>::Team: fmt::Display + FromStr,
         <D::Plugin as SCPlugin>::Player: Serialize + for<'de> Deserialize<'de>,
         <D::Plugin as SCPlugin>::GameState: Serialize + for<'de> Deserialize<'de>,
         <D::Plugin as SCPlugin>::Move: Serialize + for<'de> Deserialize<'de> {
@@ -136,7 +136,7 @@ impl<D> SCClient<D>
                     Event::MoveRequest => {
                         if let Some(ref state) = self.game_state {
                             let turn = state.turn();
-                            let color = state.player_color();
+                            let color = state.team();
                             info!("Got move request @ turn: {}, color: {:?}", turn, color);
 
                             let new_move = self.delegate.request_move(state, color);

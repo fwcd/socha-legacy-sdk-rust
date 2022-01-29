@@ -9,8 +9,8 @@ use super::Event;
 pub struct Room<P> where P: SCPlugin {
     pub room_id: String,
     #[serde(rename = "data", bound(
-        serialize = "P::Player: Serialize, P::Move: Serialize, P::PlayerColor: fmt::Display, P::GameState: Serialize",
-        deserialize = "P::Player: Deserialize<'de>, P::Move: Deserialize<'de>, P::PlayerColor: FromStr, P::GameState: Deserialize<'de>"
+        serialize = "P::Player: Serialize, P::Move: Serialize, P::Team: fmt::Display, P::GameState: Serialize",
+        deserialize = "P::Player: Deserialize<'de>, P::Move: Deserialize<'de>, P::Team: FromStr, P::GameState: Deserialize<'de>"
     ))]
     pub event: Event<P>
 }
@@ -19,7 +19,7 @@ pub struct Room<P> where P: SCPlugin {
 mod tests {
     use indoc::indoc;
     use quick_xml::de::from_str;
-    use crate::{plugin::{MockGameState, MockPlayerColor, MockPlugin}, protocol::Event};
+    use crate::{plugin::{MockGameState, MockTeam, MockPlugin}, protocol::Event};
 
     use super::Room;
 
@@ -36,7 +36,7 @@ mod tests {
             <room roomId="123">
                 <data class="memento">
                     <state turn="18">
-                        <playerColor>RED</playerColor>
+                        <team>RED</team>
                     </state>
                 </data>
             </room>
@@ -48,7 +48,7 @@ mod tests {
                 room_id: "123".to_owned(),
                 event: Event::Memento {
                     state: MockGameState {
-                        player_color: MockPlayerColor::Red,
+                        team: MockTeam::Red,
                         turn: 18
                     }
                 }

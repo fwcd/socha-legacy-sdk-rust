@@ -1,9 +1,9 @@
-/// Indicates that the value has an "associated" player color.
-/// The plugin-specific `GameState` should return the current player
-/// color when implementing this trait.
-pub trait HasPlayerColor {
-    type PlayerColor;
+/// Indicates that the value has an "associated" team.
+/// The plugin-specific `GameState` should return the current
+/// team when implementing this trait.
+pub trait HasTeam {
+    type Team;
 
-    /// Fetches the associated player color.
-    fn player_color(&self) -> Self::PlayerColor;
+    /// Fetches the associated team.
+    fn team(&self) -> Self::Team;
 }
