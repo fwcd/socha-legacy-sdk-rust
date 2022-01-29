@@ -1,11 +1,11 @@
-use socha_client_base::plugin::{SCPlugin, HasPlayerColor, HasTurn};
+use socha_client_base::plugin::{SCPlugin, HasTeam, HasTurn};
 use crate::game;
 
 #[derive(Debug)]
 pub struct SCPlugin2021;
 
 impl SCPlugin for SCPlugin2021 {
-    type PlayerColor = game::Team;
+    type Team = game::Team;
     type Player = game::Player;
     type GameState = game::GameState;
     type Move = game::Move;
@@ -13,10 +13,10 @@ impl SCPlugin for SCPlugin2021 {
     fn protocol_game_type<'a>() -> &'a str { "swc_2021_blokus" }
 }
 
-impl HasPlayerColor for game::GameState {
-    type PlayerColor = game::Team;
+impl HasTeam for game::GameState {
+    type Team = game::Team;
 
-    fn player_color(&self) -> Self::PlayerColor { self.current_team() }
+    fn team(&self) -> Self::Team { self.current_team() }
 }
 
 impl HasTurn for game::GameState {
